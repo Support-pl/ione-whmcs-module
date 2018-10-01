@@ -194,6 +194,8 @@ switch ($status['result']) {
 
 $isCheckAnsible=Capsule::table( 'tblconfiguration' )->where('setting','ione_use_ansible')->get();
 $LANG=$this->vars['_lang'];
+$cloudlink = Capsule::table('tblconfiguration')
+    ->select('value')->where('setting',ione_address)->get();
 ?>
 
 <style>
@@ -228,7 +230,7 @@ $LANG=$this->vars['_lang'];
                             </div>
                             <div class="col-sm-12">
                                 <b><?=$LANG['VMID']?></b> <a
-                                    href="https://cloud.support.by/#vms-tab/<?= $machineInfo->vmid ?>"><?= $machineInfo->vmid ?></a>
+                                    href="<?=$cloudlink[0]->value?>/#vms-tab/<?= $machineInfo->vmid ?>"><?= $machineInfo->vmid ?></a>
                             </div>
                             <div class="col-sm-12">
                                 <b><?=$LANG['PanelHeading']?>:</b><?= $vm_data['HOST']; ?>
@@ -237,7 +239,7 @@ $LANG=$this->vars['_lang'];
                         <div class="col-sm-6">
                             <div class="col-sm-12">
                                 <b><?=$LANG['client']?>:</b> <a
-                                    href="https://my.support.by/admin/clientsservices.php?userid=<?= $service_user->id ?>&id=<?= $system_id ?>">
+                                    href="/admin/clientsservices.php?userid=<?= $service_user->id ?>&id=<?= $system_id ?>">
                                     <?= $service_user->firstname . ' ' . $service_user->lastname ?>
                                 </a>
                             </div>

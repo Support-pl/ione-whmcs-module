@@ -363,9 +363,8 @@ function onconnector_SuspendAccount(array $params)
             $postData = array(
                 'deptid' => '7',
                 'subject' => 'Account data is not set',
-                'message' => 'Service suspend error: '.$params['serviceid'].' Account: '.$params['clientsdetails']['fullname']. ' enter VMid and/or userId on service page: https://my.support.by/admin/clientsservices.php?userid='.$params['userid'].'&id='.$params['serviceid'],
+                'message' => 'Service suspend error: '.$params['serviceid'].' Account: '.$params['clientsdetails']['fullname']. ' enter VMid and/or userId on service page: /admin/clientsservices.php?userid='.$params['userid'].'&id='.$params['serviceid'],
                 'name' => 'onconector',
-                'email' => 'info@support.by',
                 'priority' => 'Medium',
                 'markdown' => true,
             );
@@ -834,36 +833,6 @@ function onconnector_AdminServicesTabFieldsSave($params)
     }
 }
 
-function onconnector_ServiceSingleSignOn(array $params)
-{
-    try {
-        LogModuleCall('Ione',__FUNCTION__,$params,$params,$params);
-        $onaccaunt=Capsule::table('mod_on_user')->where('id_service',$params['serviceid'])->first();
-        $loginon=$onaccaunt->loginon;
-        $password=$onaccaunt->passwordon;
-        setcookie("one-user",$loginon,time()+3600, '/','.support.by');
-
-        $response = array();
-        return array(
-            'success' => true,
-            'redirectTo' => '/admin/addonmodules.php?module=vmlist&mod=test&serviceId='.$params['serviceid'],
-        );
-    } catch (Exception $e) {
-        // Record the error in WHMCS's module log.
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $e->getMessage(),
-            $e->getTraceAsString()
-        );
-
-        return array(
-            'success' => false,
-            'errorMsg' => $e->getMessage(),
-        );
-    }
-}
 
 function onconnector_AdminSingleSignOn(array $params)
 {

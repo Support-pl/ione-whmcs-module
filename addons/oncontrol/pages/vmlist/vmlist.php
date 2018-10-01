@@ -41,7 +41,7 @@ function vmlist_javaScripts()
 
 $start = microtime(true);
 vmlist_javaScripts();
-$this->vars['cloudLink']= Capsule::table('tblconfiguration')
+$cloudlink = Capsule::table('tblconfiguration')
     ->select('value')->where('setting',ione_address)->get();
 
 
@@ -381,8 +381,8 @@ $LANG=$this->vars['_lang'];
                 <td><a href="/admin/clientssummary.php?userid=<?=$oneUser->userid?>" target="_blank"><?=$oneUser->userid?></a></td>
                 <td><a href="/admin/clientsservices.php?userid=<?=$oneUser->userid?>&id=<?=$oneUser->id_service?>" target="_blank"><?=$oneUser->id_service?></a></td>
                 <td><?=$oneUser->loginon?></td>
-                <td><a href="<?=$this->vars['cloudLink']?>/#users-tab/<?=$oneUser->useridOn?>" target="_blank"><?=$oneUser->useridOn?></a></td>
-                <td><a href="<?=$this->vars['cloudLink']?>/#vms-tab/<?=$oneUser->vmid?>" target="_blank"><?=$oneUser->vmid?></a></td>
+                <td><a href="<?=$cloudlink[0]->value?>/#users-tab/<?=$oneUser->useridOn?>" target="_blank"><?=$oneUser->useridOn?></a></td>
+                <td><a href="<?=$cloudlink[0]->value?>/#vms-tab/<?=$oneUser->vmid?>" target="_blank"><?=$oneUser->vmid?></a></td>
                 <td><?=$oneUser->state?></td>
                 <td><?=$oneUser->domainstatus?></td>
                 <td><?=$oneUser->host?></td>
