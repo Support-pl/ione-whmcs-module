@@ -1,13 +1,16 @@
 <? if (!defined("WHMCS"))
     die("This file cannot be accessed directly");
 use WHMCS\Database\Capsule;
+ini_set('display_errors', 0);
 ?>
 <script type="text/javascript">
     $("#sortable").ready(function () {
         $( "#sortable" ).sortable({});
     });
 </script>
-
+<!--<pre>--><?//
+//    print_r($this);
+//?><!--</pre>-->
 <form method="post" action="<?=$this->link.'&tabs=ansible&mod=ansibledb&action=fullActivation'?>">
     <div class="panel panel-default">
         <div class="panel-heading"><?=$this->LANG['PanelHeading']?>:</div>

@@ -82,7 +82,7 @@ class AnsibleComand
         $error=$this->checkdata($post,$LANG);
         if($error){
             $this->printError($error);
-            return;
+            return $error;
         }
         if ($this->saveData($post)){
             $this->printSuccess($LANG['addent'],$LANG['addyou']);
@@ -90,20 +90,35 @@ class AnsibleComand
 
     }
 
-    function updateAnsible($post){
+    function updateAnsible($post,$LANG){
         $os='/';
+        extract($post);
+        if(empty($name)){
+            $this->printError($LANG['errorname']);
+            return;
+        }
+        if(Capsule::table( 'mod_onconfiguratorAddon' )->where('name',$name)->first()){
+            $this->printError($LANG['errorname2']);
+            return;
+        }
+        if (empty($body)){
+            $this->printError($LANG['errorname3']);
+            return;
+        }
         foreach ($post['check'] as $key=>$ch){
             $os.=$key.'/';
         }
-        if(!Capsule::table('mod_onconfiguratorAddon')
-            ->where('id', key($post['upgrade']))
+        if(Capsule::table('mod_onconfiguratorAddon')
+            ->where('id', $post['idupdate'])
             ->update(['name'=>$post['name'],
                 'descriptions'=>$post['descriptions'],
                 'Addon'=>$post['addonid'],
                 'body'=>$post['body'],
                 'os'=>$os]))
         {
-            $this->printSuccess("Успешно обновлено:","Данные успешно обновлены");
+            $this->printSuccess($LANG['updok'],$LANG['updok2']);
+        }else{
+            $this->printSuccess($LANG['updok'],$LANG['updok2']);
         }
         extract($post);
     }

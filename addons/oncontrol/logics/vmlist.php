@@ -42,7 +42,8 @@ function vmlist_javaScripts()
 $start = microtime(true);
 
 vmlist_javaScripts();
-$vars['cloudLink']='https://vcloud.support.by';
+$vars['cloudLink']= Capsule::table('tblconfiguration')
+    ->select('value')->where('setting',ione_address)->get();
 
 $arrayVariant=[
     'Active'=>['RUNNING','POWEROFF'],

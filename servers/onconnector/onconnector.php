@@ -1,9 +1,13 @@
 <?php
 use WHMCS\Database\Capsule;
+use Symfony\Component\Yaml\Yaml;
 
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
+ini_set('display_errors', 0);
+
+set_time_limit(0);
 
 function passgenerator()
 {
@@ -66,6 +70,7 @@ function addinbd($serviceid,$loginon,$password,$userid,$vmid,$modifyUser = 0,$ad
     }
 }
 
+
 function onconnector_MetaData()
 {
     return array(
@@ -94,6 +99,7 @@ function onconnector_ConfigOptions()
 function onconnector_CreateAccount(array $params)
 {try
 {
+
     ini_set('error_reporting', E_ALL);
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
@@ -138,6 +144,9 @@ function onconnector_CreateAccount(array $params)
             case 'ram':
                 $value=explode(' ',$propertie['TITLE']);
                 $allOptions['ram']+=$value[0];
+                break;
+            case 'instance_size':
+                $azurename = $propertie['TITLE'];
                 break;
             case 'hdd':
                 $value=explode(' ',$propertie['TITLE']);
@@ -216,6 +225,7 @@ function onconnector_CreateAccount(array $params)
             require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/addons/oncontrol/classes/ActivateAnsible.php');
             $ansibleDB = new AutoActivateAnsible($params['serviceid']);
             $allOptions['services'] = $ansibleDB->getServicesFromIds($ansibles);
+
         }
 
         if($allOptions['services']){
@@ -223,7 +233,6 @@ function onconnector_CreateAccount(array $params)
         }else{
             $allOptions['ansible']=false;
         }
-
 
 
         $allOptions['password'] = passgenerator();
@@ -240,10 +249,17 @@ function onconnector_CreateAccount(array $params)
 
         $passroot = localAPI('EncryptPassword', $postData,$adminUsername);
         if ($passroot['result'] == 'error'){
-                return "Error adminuser. Check configure module.";
+            return "Error adminuser. Check configure module.";
         }
 
         require_once("lib/ONConnect.php");
+            // Record the error in WHMCS's module log.
+        logModuleCall(
+            'onconnector',
+            __FUNCTION__,
+            $params,
+            $allOptions
+        );
 
         if(!$allOptions['iops'])                                // If IOPS is null
         {
@@ -275,26 +291,45 @@ function onconnector_CreateAccount(array $params)
         }
 
 
+        $azure =  Capsule::table( 'mod_azure_servers' )->where('idproduct','=',$params['pid'])->get();
+        if($azure != null){
+            $allOptions['release'] = true;
+            $allOptions['username'] = 'azuser';
+            $allOptions['extra'] = array('type' => 'azure',
+                'instance_size' => $azurename);
+            logModuleCall(
+                'onconnector',
+                'azure',
+                $params,
+                $allOptions
+            );
+        }
+
+        logModuleCall(
+            'onconnector',
+            __FUNCTION__,
+            $params,
+            $allOptions
+        );
+
         $onconnect = new ONConnect( $params['serverip'],$params['serverport'] );
         $result = $onconnect->createVMwithSpecs($allOptions);
 
-
-        if($result['result']['error']=='UserAllocateError')                 // If user already exists(name taken);
+        if($result['result']['error']=='UserAllocateError')                 //If user already exists(name taken);
         {
             return "User user_$params[serviceid] already exists in ON";
         }
 
-
-        if($result['result']['exeption']){                                  // If some unhandled Exeption
+        if($result['result']['exeption']){                                  //If some unhandled Exeption
             return $result['result']['exeption'];
         }
 
-        if ($result['result']['error']=='TemplateLoadError')                // If template not set
+        if ($result['result']['error']=='TemplateLoadError')                //If template not set
         {
             return 'error: Template load error';
         }
 
-        if(!$result['result']){                                             // If answer is empty.
+        if(!$result['result']){                                             //If answer is empty.
             return 'error: Error getting data from IONe';
         }
 
@@ -309,12 +344,10 @@ function onconnector_CreateAccount(array $params)
                 )
             );
 
-
         addinbd( $params['serviceid'], $allOptions['login'], $allOptions['password'], $result['result']['userid'], $result['result']['vmid']);
 
     }
-    else
-    {
+    else {
         return 'error: Only one account for one service';
     }
 }
@@ -337,105 +370,102 @@ catch (Exception $e)
 
 function onconnector_SuspendAccount(array $params)
 {
-        if($params['suspendreason']=='force'){
-            $reason=true;
-        }else{$reason=false;}
-        $onaccaunt=Capsule::table('mod_on_user')
-            ->select("vmid")
-            ->where('id_service',$params['serviceid'])
-            ->first();
-        $vmid=$onaccaunt->vmid;
 
+    if ($params['suspendreason'] == 'force') {
+        $reason = true;
+    } else {
+        $reason = false;
+    }
+    $onaccaunt = Capsule::table('mod_on_user')
+        ->select("vmid")
+        ->where('id_service', $params['serviceid'])
+        ->first();
+    $vmid = $onaccaunt->vmid;
 
-        $resultSuspend = Capsule::table('tblhostingaddons')
-            ->select('id')
-            ->where('hostingid',$params['serviceid'])
-            ->update(['status'=>'Suspended']);
+    $resultSuspend = Capsule::table('tblhostingaddons')
+        ->select('id')
+        ->where('hostingid', $params['serviceid'])
+        ->update(['status' => 'Suspended']);
 
-        if(ctype_digit($vmid)) {
-            require_once("lib/ONConnect.php");
-            $onconnect = new ONConnect( $params['serverip'] );
-            $result = $onconnect->Suspend($vmid,$reason);
-        }
-        else
-        {
-            $command = 'OpenTicket';
-            $postData = array(
-                'deptid' => '7',
-                'subject' => 'Account data is not set',
-                'message' => 'Service suspend error: '.$params['serviceid'].' Account: '.$params['clientsdetails']['fullname']. ' enter VMid and/or userId on service page: /admin/clientsservices.php?userid='.$params['userid'].'&id='.$params['serviceid'],
-                'name' => 'onconector',
-                'priority' => 'Medium',
-                'markdown' => true,
-            );
-            $adminlog = Capsule::table( 'tbladmins' )
-                ->select('username')->where('disabled','=','0')->get();
-            $adminUsername = $adminlog[0]->username;
+    if (ctype_digit($vmid)) {
+        require_once("lib/ONConnect.php");
+        $onconnect = new ONConnect($params['serverip']);
+        $result = $onconnect->Suspend($vmid, $reason);
+    } else {
+        $command = 'OpenTicket';
+        $postData = array(
+            'deptid' => '7',
+            'subject' => 'Account data is not set',
+            'message' => 'Service suspend error: ' . $params['serviceid'] . ' Account: ' . $params['clientsdetails']['fullname'] . ' enter VMid and/or userId on service page: /admin/clientsservices.php?userid=' . $params['userid'] . '&id=' . $params['serviceid'],
+            'name' => 'onconector',
+            'priority' => 'Medium',
+            'markdown' => true,
+        );
 
-            $results = localAPI($command, $postData, $adminUsername);
-            return "error: Auth data is incorrect";
-        }
-        
+        $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
+        $adminUsername = $adminlog[0]->value;
+
+        $results = localAPI($command, $postData, $adminUsername);
+        return "error: Auth data is incorrect";
+    }
     return 'success';
 }
 
 function onconnector_ChangePackage(array $params)
 {
-        $onaccaunt=Capsule::table('mod_on_user')
-            ->select('vmid')
-            ->where('id_service',$params['serviceid'])
-            ->first();                                    // Getting user_id, vmid, Login, Password,
-        $vmid=$onaccaunt->vmid;
-        if(ctype_digit($vmid)) {
-            require_once("lib/ONConnect.php");
-            $onconnect = new ONConnect($params['serverip']);
-            $result = $onconnect->Unsuspend($vmid);
-            if ($result['result']['userid']) {
-                Capsule::table('mod_on_user')
-                    ->where('id_service', $params['serviceid'])
-                    ->update(
-                        array(
-                            'userid' => $result['result']['userid'],
-                        )
-                    );
-            }
-            $result = json_encode( $result );
+    $onaccaunt=Capsule::table('mod_on_user')
+        ->select('vmid')
+        ->where('id_service',$params['serviceid'])
+        ->first();                                    // Getting user_id, vmid, Login, Password,
+    $vmid=$onaccaunt->vmid;
+    if(ctype_digit($vmid)) {
+        require_once("lib/ONConnect.php");
+        $onconnect = new ONConnect($params['serverip']);
+        $result = $onconnect->Unsuspend($vmid);
+        if ($result['result']['userid']) {
+            Capsule::table('mod_on_user')
+                ->where('id_service', $params['serviceid'])
+                ->update(
+                    array(
+                        'userid' => $result['result']['userid'],
+                    )
+                );
         }
-        else
-        {
-            return "error: Auth data is incorrect";
-        }
+        $result = json_encode( $result );
+    }
+    else {
+        return "error: Auth data is incorrect";
+    }
     return 'success';
 }
 
 function onconnector_UnsuspendAccount(array $params)
 {
-        $onaccaunt=Capsule::table('mod_on_user')
-            ->where('id_service',$params['serviceid'])
-            ->first();                                      // Getting data for ON from DB.
 
-        $resultSuspend = Capsule::table('tblhostingaddons')
-            ->select('id')
-            ->where('hostingid',$params['serviceid'])
-            ->update(['status'=>'Active']);
-        
-        $vmid=$onaccaunt->vmid;                             // Putting query-results to vars
-        
-        if(ctype_digit($vmid)) {
-            require_once("lib/ONConnect.php");
-            $onconnect = new ONConnect( $params['serverip'] );
-            $result = $onconnect->Unsuspend( $vmid );
-        }
-        else
-        {
-            return "error: Auth data is incorrect";
-        }
+    $onaccaunt = Capsule::table('mod_on_user')
+        ->where('id_service', $params['serviceid'])
+        ->first();                                      // Getting data for ON from DB.
 
+    $resultSuspend = Capsule::table('tblhostingaddons')
+        ->select('id')
+        ->where('hostingid', $params['serviceid'])
+        ->update(['status' => 'Active']);
+
+    $vmid = $onaccaunt->vmid;                             // Putting query-results to vars
+
+    if (ctype_digit($vmid)) {
+        require_once("lib/ONConnect.php");
+        $onconnect = new ONConnect($params['serverip']);
+        $result = $onconnect->Unsuspend($vmid);
+    } else {
+        return "error: Auth data is incorrect";
+    }
     return 'success';
 }
 
 function onconnector_TerminateAccount(array $params)
 {
+
     try {
         $onaccaunt=Capsule::table('mod_on_user')->where('id_service',$params['serviceid'])->first();
         $userid=$onaccaunt->userid;
@@ -443,8 +473,9 @@ function onconnector_TerminateAccount(array $params)
         if(ctype_digit($userid) && ctype_digit($vmid))
         {
             require_once( "lib/ONConnect.php" );
-            $onconnect= new ONConnect($params['serverip']);
-            $result=$onconnect->Terminate($userid,$vmid);
+            $onconnect = new ONConnect($params['serverip']);
+            $result = $onconnect->Terminate($userid, $vmid);
+
         }
         else
         {
@@ -600,7 +631,6 @@ function onconnector_buttonThreeFunction(array $params)
             ->where('id',$params['packageid'])
             ->first();
 
-
         $c=strpos($product->name,"RIAL VDS");
         if (!empty($c)){
             $trial=true;
@@ -700,9 +730,6 @@ function onconnector_buttonThreeFunction(array $params)
                 ->where('id',$params['serviceid'])
                 ->first();
 
-
-
-
             addinbd( $params['serviceid'], $user, $pass, $result['result']['userid'], $result['result']['vmid']);
 
         }
@@ -787,14 +814,12 @@ try{
         $vmid=$onaccaunt->vmid;
     }
 
-
-
-    $fieldsarray = array(
-        'Login ON' => '<input type="text" name="loginON" size="30" value="'.$loginon.'" />',
-        'Passwordon ON' => '<input type="text" name="passwordON" size="30" value="'.$password.'" />',
-        'userid ON' => '<input type="text" name="useridON" size="30" value="'.$userid.'" />',
-        'vmid ON' => '<input type="text" name="vmidON" size="30" value="'.$vmid.'" />',
-    );
+       $fieldsarray = array(
+           'Login ON' => '<input type="text" name="loginON" size="30" value="'.$loginon.'" />',
+           'Passwordon ON' => '<input type="text" name="passwordON" size="30" value="'.$password.'" />',
+           'userid ON' => '<input type="text" name="useridON" size="30" value="'.$userid.'" />',
+           'vmid ON' => '<input type="text" name="vmidON" size="30" value="'.$vmid.'" />',
+       );
 
 }
     catch (Exception $e) {
@@ -815,11 +840,13 @@ try{
 
 function onconnector_AdminServicesTabFieldsSave($params)
 {
+
     try {
         $login=$_POST['loginON'];
         $password=$_POST['passwordON'];
         $userid=$_POST['useridON'];
         $vmid=$_POST['vmidON'];
+
         addinbd($params['serviceid'],$login,$password,$userid,$vmid,$params['userid'],$params['serverusername']);
     }
     catch (Exception $e) {

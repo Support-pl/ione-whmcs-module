@@ -2,6 +2,7 @@
 if( !defined( "WHMCS" ) )
     die( "This file cannot be accessed directly" );
 use WHMCS\Database\Capsule;
+ini_set('display_errors', 0);
 
 function onconfigurator_errorMessage($bigText,$allText){
     printf('<div class="errorbox">

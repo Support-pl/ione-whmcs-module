@@ -2,6 +2,7 @@
 if (!defined("WHMCS"))
     die("This file cannot be accessed directly");
 use WHMCS\Database\Capsule;
+ini_set('display_errors', 0);
 $allAddon=Capsule::table( 'tbladdons' )
     ->select("id","name","description")
     ->where( 'description','like',  '%"TYPE": "playbook"%')
@@ -16,19 +17,30 @@ $oss=Capsule::table( 'tbladdons' )
     ->select("id","description")
     ->where( 'description','like',  '%"GROUP": "os"%')
     ->get();
-?>
 
+if($this->updateDate->name == null){
+    extract($_POST);
+}else{
+    $name = $this->updateDate->name;
+    $idupdate = $this->updateDate->id;
+    $descriptions = $this->updateDate->descriptions;
+    $body = $this->updateDate->body;
+    $check = $this->updateDate->check;
+}
+
+?>
 <div class="previous"><a href="<?=$this->vars["modulelink"]?>&tabs=ansible&mod=ansibledb"><?=$this->LANG['backlist']?></a> </div>
 
 <fieldset class="col-lg-5">
     <form method="post" action="<?=$this->vars["modulelink"]?>&mod=ansibledb&tabs=ansible&action=<?=$_GET['action']?>">
         <div class="form-group">
             <label for="name"><?=$this->LANG['name']?>:</label>
-            <input class="form-control" id="name" type="text" name="name" value="<?=$this->updateDate->name?>">
+            <input class="form-control" id="name" type="text" name="name" value="<?=$name?>">
+            <input class="" id="idupdate" type="hidden" name="idupdate" value="<?=$idupdate?>">
         </div>
         <fieldset class="form-group">
             <label for="descriptions"><?=$this->LANG['descs']?>:</label>
-            <textarea maxlength="512" rows="5" class="form-control" id="descriptions" name="descriptions" type="text"><?=$this->updateDate->descriptions?></textarea>
+            <textarea maxlength="512" rows="5" class="form-control" id="descriptions" name="descriptions" type="text"><?=$descriptions?></textarea>
         </fieldset>
         <fieldset class="form-group">
             <label for="addon"><?=$this->LANG['addon']?>:</label><br>
@@ -41,12 +53,12 @@ $oss=Capsule::table( 'tbladdons' )
         </fieldset>
         <fieldset class="form-group">
             <label for="body"><?=$this->LANG['body']?>:</label>
-            <textarea rows="10" maxlength="1024" class="form-control" id="body" name="body" size="10" type="text"><?=$this->updateDate->body?></textarea>
+            <textarea rows="10" maxlength="1024" class="form-control" id="body" name="body" size="10" type="text"><?=$body?></textarea>
         </fieldset>
         <fieldset class="form-check">
             <legend><?=$this->LANG['noteos']?>:</legend>
             <? foreach ($oss as $os):?>
-                        <input class="form-check-input" type="checkbox" name="check[<?=$os->id?>]" id="<?=$os->id?>" <?if(in_array($os->id, $this->updateDate->check)){print 'checked';}?>>
+                        <input class="form-check-input" type="checkbox" name="check[<?=$os->id?>]" id="<?=$os->id?>" value="<?=$os->id?>" <?if(in_array($os->id, $check)){print 'checked';}?>>
                         <label class="form-check-label" for="<?=$os->id?>"><?=json_decode($os->description)->TITLE?></label><br>
             <?endforeach;?>
         </fieldset>

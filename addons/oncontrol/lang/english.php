@@ -119,4 +119,8 @@ $_ADDONLANG['errorname']='Error: Field Name can not be empty';
 $_ADDONLANG['errorname2']='Error: Field Name must be unique';
 $_ADDONLANG['errorname3']='Error: Field Body can not be empty';
 $_ADDONLANG['customfield']='Immunity (field name)';
+$_ADDONLANG['updok']='Successfully updated:';
+$_ADDONLANG['updok2']='Data successfully updated';
+$_ADDONLANG['deleteall']='Delete all data when removing a module';
+$_ADDONLANG['azureserver']='Сonfigure Azure';
 ?>

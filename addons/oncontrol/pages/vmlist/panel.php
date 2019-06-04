@@ -1,14 +1,13 @@
 <?php
-
+ini_set('display_errors', 0);
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 
-
 use WHMCS\Database\Capsule as Capsule;
 
 
-if (isset($_POST['action']))
+if (isset($_POST['action']))                                            // <-- ACTIONS LIKE SUSPEND/UNSUSPEND ARE HERE
 {
     require_once 'service_manager.php';
 }
@@ -39,7 +38,6 @@ $ansibles = Capsule::table('mod_onconfiguratorAddon')
     ->get();
 
 $machineInfo = Capsule::table('mod_on_user')
-    //->select('vmid')
     ->where('id_service', $system_id)
     ->first();
 
@@ -132,7 +130,7 @@ function disable_current_state($service, $status)
 
 $status = getStatusMachine($this->onconnect, $machineInfo->vmid);
 
-
+//SUSPEND BUTTON PROPERTIES
 switch ($status['result']) {
     case 'RUNNING':
         $suspendButtonTitle = 'Suspend';
@@ -153,7 +151,7 @@ switch ($status['result']) {
 
 }
 
-
+// POWER BUTTON PROPERTIES
 switch ($status['result']) {
     case 'RUNNING':
         $powerButtonTitle = 'Power off';
@@ -182,7 +180,7 @@ switch ($status['result']) {
         break;
 }
 
-
+// REFRESH BUTTON PROPERTIES
 switch ($status['result']) {
     case 'RUNNING':
         break;
@@ -217,7 +215,7 @@ $cloudlink = Capsule::table('tblconfiguration')
                     <div class="col-sm-12">
                         <div class="col-sm-6">
                             <div class="col-sm-12">
-                                <b><?=$LANG['thId']?>:</b> <?php echo $service->id; ?>
+                                <b><?=$LANG['thId']?>:</b> <?php echo $service->id; ?> <!-- PASTE FIELDS HERE -->
                             </div>
                             <div class="col-sm-12">
                                 <b><?=$LANG['Status']?>:</b> <b id="state"
@@ -369,6 +367,12 @@ $cloudlink = Capsule::table('tblconfiguration')
                                     <?=$LANG['reboot']?> <span class="glyphicon glyphicon-repeat"></span>
                                 </button>
                             </div>
+                            <div class="col-md-3 col-sm-6 text-center" style="margin-top: 20px;">
+                                <button id="rebootRetrieveShowback" type="submit" name="action"
+                                        value="RetrieveShowback" class="btn btn-info">
+                                    RetrieveShowback <span class="glyphicon glyphicon-repeat"></span>
+                                </button>
+                            </div>
                             <div id="refreshButton" class="col-md-3 col-sm-6 text-center" style="margin-top: 20px;">
                                 <button <?= $refreshButtonDisable; ?> type="submit" name="action" value="reset"
                                                                       class="btn btn-info">
@@ -390,11 +394,6 @@ $cloudlink = Capsule::table('tblconfiguration')
                     </div>
                 </form>
 
-                <form action="">
-                    <div class="col-sm-12 text-center" style="margin-top: 20px;">
-                        <button class="btn btn-block btn-default"><?=$LANG['restore']?></button>
-                    </div>
-                </form>
 
                 <div class="col-sm-12 text-center" style="margin-top: 20px;">
                     <a id="terminate" class="btn btn-block btn-danger"><?=$LANG['terminate']?></a>
@@ -496,7 +495,7 @@ $cloudlink = Capsule::table('tblconfiguration')
         <div class="row">
 
             <div class="col-sm-12">
-                <h2 class="text-center"><?=$LANG['tabsansible']?>:</h2>
+                <h2 class="text-center"><?=$LANG['tabsansible']?>:</h2>                           <!-- ANSIBLE -->
                 <div class="form-check">
                     <form id="ansiblesForm" action="/admin/addonmodules.php" method="GET">
                         <?php $i = 0; ?>
@@ -523,8 +522,6 @@ $cloudlink = Capsule::table('tblconfiguration')
         </div>
     </div>
     <?endif;?>
-
-
 
     <script type="text/javascript">
         $(document).ready(function () {

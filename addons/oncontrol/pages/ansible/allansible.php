@@ -1,5 +1,7 @@
 <?php
 use WHMCS\Database\Capsule;
+ini_set('display_errors', 0);
+
 ?>
     <table class='table table-striped table-bordered table-hover'>
     <th>#</th>
@@ -7,7 +9,7 @@ use WHMCS\Database\Capsule;
     <th><?=$this->LANG['desc']?></th>
     <th><?=$this->LANG['os']?></th>
     <th></th>
-    <form method="post" action="<?=$this->modulelink?>&action=change">
+    <form method="post" action="addonmodules.php?module=oncontrol&mod=ansibledb&tabs=ansible&action=change">
     <?php
 foreach (Capsule::table('mod_onconfiguratorAddon')
              ->select("id","name","descriptions","os")
@@ -33,7 +35,7 @@ foreach (Capsule::table('mod_onconfiguratorAddon')
 <div class="btn-group">
 <input type="submit" class="btn btn-primary" name='activate' value="Activate">
 <input type='submit' class="btn btn-primary" name='del' value='<?=$this->LANG['buttonDelete']?>'>
-<a class="btn btn-primary" href="<?=$this->modulelink?>&action=add"><?=$this->LANG['addnew']?></a>
+<a class="btn btn-primary" href="addonmodules.php?module=oncontrol&mod=ansibledb&tabs=ansible&action=add"><?=$this->LANG['addnew']?></a>
 </form>
 
 </div>

@@ -1,6 +1,6 @@
 <?php
 use WHMCS\Database\Capsule;
-
+ini_set('display_errors', 0);
 function vmlist_javaScripts()
 {?>
     <script>
@@ -90,7 +90,7 @@ if(!$searchHost){
     $searchHost=$hostsON;
 }
 
-if(in_array('notInWhmcs',$smartStatus)){
+if(in_array('notInWhmcs',$smartStatus)){     //missing in whmcs
     $loginWhmcs=Capsule::table('tblhosting')
         ->join('mod_on_user','mod_on_user.id_service','=','tblhosting.id')
         ->lists('vmid');
@@ -100,7 +100,7 @@ if(in_array('notInWhmcs',$smartStatus)){
         ->lists('login');
 }
 
-if(in_array('hasError',$smartStatus)){
+if(in_array('hasError',$smartStatus)){       //filled with an error
     $hostingIds[]=Capsule::table('tblhosting')
         ->join('mod_on_user','mod_on_user.id_service','=','tblhosting.id')
         ->orWhere('mod_on_user.vmid',' ')
@@ -113,7 +113,7 @@ if(in_array('hasError',$smartStatus)){
 }
 
 
-if(in_array('noStatus',$smartStatus)){
+if(in_array('noStatus',$smartStatus)){        //if the statuses do not match
     foreach ($arrayVariant as $key=>$variant) {
         $hostingIds[] = Capsule::table('tblhosting')
             ->select('mod_iOne_vmlist_cache.state','tblhosting.domainstatus','tblhosting.id')
@@ -252,7 +252,7 @@ elseif(count($hostingIds)!=0 && count($userIdOn)==0){
         ->orderBy('mod_iOne_vmlist_cache.vmid', 'asc')
         ->get();
 }
-elseif(count($hostingIds)==0 && count($userIdOn)!=0){
+elseif(count($hostingIds)==0 && count($userIdOn)!=0){   //does not exist in whmcs
     $answerCount = Capsule::table('mod_iOne_vmlist_cache')
         ->whereIn('login',$userIdOn)
         ->where('ip', 'like', '%' . $searchIP . '%')

@@ -1,8 +1,11 @@
 <?php
 
 use WHMCS\Database\Capsule as Capsule;
-
+ini_set('display_errors', 0);
 if (isset($_POST['action'])) {
+//    echo '<pre>';
+//    print_r($_POST);
+//    echo '</pre>';
 	extract($_POST);
 	require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/servers/onconnector/lib/ONConnect.php');
 
@@ -22,6 +25,15 @@ if (isset($_POST['action'])) {
 
 	switch ($action) {
 
+        case 'RetrieveShowback':
+            $technicalMessage = ('RetrieveShowback');
+
+            $command = ('RetrieveShowback');
+
+            $on_connect->RetrieveShowback();
+            print_r($on_connect->RetrieveShowback());
+            break;
+
 		case 'suspend':
 			$technicalMessage = ('Suspending.');
 
@@ -31,6 +43,7 @@ if (isset($_POST['action'])) {
                 'suspendreason' => 'force',
             );
             $results = localAPI($command, $postData);
+            print_r($results);
 			break;
 
 		case 'unsuspend':
@@ -40,6 +53,7 @@ if (isset($_POST['action'])) {
                 'accountid' => $serviceId,
             );
             $results = localAPI($command, $postData);
+            print_r($results);
 			break;
 
 		case 'reset':
@@ -88,7 +102,7 @@ if(isset($technicalMessage)) : ?>
 
 
 if (isset($message)): ?>
-	<div class="col-sm-12">
+	<div class="col-sm-12">                            <!-- STATUS PANEL -->
 		<div class="panel panel-success">
 			<div class="panel-heading">
 				<h2><?=$message; ?></h2>

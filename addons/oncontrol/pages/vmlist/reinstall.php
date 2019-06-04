@@ -7,6 +7,7 @@ if (!defined("WHMCS")) {
 	die("This file cannot be accessed directly");
 }
 
+ini_set('display_errors', 0);
 $idRefreshSystem=$_GET['serviceId'];
 extract($_POST);?>
     <div class="container-fluid">
@@ -134,11 +135,11 @@ extract($_POST);?>
 					<div class="col-sm-12">
 						<label for="groupId"><?=$LANG['reinstallgp']?>:</label>
                         <select class="form-control"	id="idNewProduct" name="idNewProduct">
-							<?php foreach ($reinstal_settings as $reinstal_setting) :
+							<?php foreach ($reinstal_settings as $reinstal_setting) :                   // <-- ALL RATES IN THE SAME GROUPS HERE
 								$possible_product = Capsule::table('tblproducts')
 									->where('id', $reinstal_setting->upgrade_product_id)
 									->first() ?>
-								<option value="<?php echo $possible_product->id;?>">
+								<option value="<?php echo $possible_product->id;?>">                     <!-- PRODUCT ID | GID -->
 									<?php echo $possible_product->name ?>
 								</option>
 							<?php endforeach; ?>
@@ -148,7 +149,7 @@ extract($_POST);?>
 					<div class="col-sm-12">
 						<label for="idNewOS" style="margin-top: 10px;"><?=$LANG['reinstallos']?>:</label>
                         <select class="form-control" id="idNewOS" name="idNewOS" style="width: 100%;">
-							<?php foreach ($operating_systems as $operating_system) : ?>
+							<?php foreach ($operating_systems as $operating_system) : ?>            <!-- ALL OS HERE -->
 								<option value="<?php echo $operating_system->addonid; ?>">
 									<?php echo $operating_system->os ?>
 								</option>

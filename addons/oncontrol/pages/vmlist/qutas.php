@@ -1,7 +1,9 @@
 <?php
+ini_set('display_errors', 0);
 $quotas = $this->onconnect->datastoresMonitoring();
 $quotasRam = $this->onconnect->hostsMonitoring();
 $LANG=$this->vars['_lang'];
+
 ?>
 <script>
     function progressBarPrint(name,quota) {

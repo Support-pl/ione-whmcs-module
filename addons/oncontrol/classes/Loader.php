@@ -1,5 +1,6 @@
 <?php
 use WHMCS\Database\Capsule;
+ini_set('display_errors', 0);
 class Loader{
     protected $vars;
     protected $LANG;
@@ -13,7 +14,7 @@ class Loader{
         require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/servers/onconnector/lib/ONConnect.php');
         $this->onconnect = new ONConnect();
         ini_set('error_reporting', E_ALL);
-        ini_set('display_errors', 1);
+        ini_set('display_errors', 0);
         ini_set('display_startup_errors', 1);
         $this->vars = $vars;
         $this->LANG = $this->vars['_lang'];
@@ -88,7 +89,7 @@ class Loader{
                 <?=$this->loadPageContent();?>
             </div>
         </div>
-        <div hidden class="loading" style="position: absolute; z-index: 1000000;">
+        <div hidden class="loading" style="position: absolute; z-index: 1000000;top:200px;left:47%;">
             <img src="/modules/addons/oncontrol/img/loading.gif">
         </div>
     <?}

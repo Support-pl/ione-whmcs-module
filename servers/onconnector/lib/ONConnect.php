@@ -1,7 +1,7 @@
 <?php
 use WHMCS\Database\Capsule;
 
-
+ini_set('display_errors', 0);
 
 class ONConnect
 {
@@ -62,7 +62,7 @@ class ONConnect
         try {
             $this->context = new ZMQContext();
             $this->socket = $this->context->getSocket(ZMQ::SOCKET_REQ, 'ZMQSockIone');
-            $this->socket->setSockOpt(ZMQ::SOCKOPT_RCVTIMEO,30000);
+            $this->socket->setSockOpt(ZMQ::SOCKOPT_RCVTIMEO,-1);
             $this->socket->setSockOpt(ZMQ::SOCKOPT_SNDTIMEO,10000);
             $endpoints = $this->socket->getEndpoints();
             if (!in_array($this->dsn, $endpoints['connect'])) {
@@ -133,6 +133,12 @@ class ONConnect
         $json=$this->zmqCommunication("Terminate",$param);
         return json_decode($json,true);
     }
+    public function TerminateIaas($uid)
+    {
+        $param=array($uid);
+        $json=$this->zmqCommunication("UserDelete",$param);
+        return json_decode($json,true);
+    }
 
     public function getVmByName($name)                                  // Getting VM data by name, using for button 'check'
     {
@@ -148,9 +154,8 @@ class ONConnect
         return json_decode($json,true);
     }
 
-    public function Test()                                             // Checking IONe availability sending 'ping', answer should be 'pong'
+    public function Test($param=array("PING"))                          // Checking IONe availability sending 'ping', answer should be 'pong'
     {
-        $param=array("PING");
         $json=$this->zmqCommunication("Test",$param);
         return json_decode($json,true);
     }
@@ -169,6 +174,61 @@ class ONConnect
         return json_decode($json,true);
     }
 
+    public function UserCreateIaaS($arrayParam)                      // Creating iaas user
+    {
+
+        $param=array( $arrayParam['login'],$arrayParam['pass'],$arrayParam['groupid'],$arrayParam['locale']);
+        $json=$this->zmqCommunication("UserCreate",$param);
+        return json_decode($json,true);
+    }
+
+
+
+    public function RetrieveShowback($uid,$time,$balance)                      // get date about iaas users
+    {
+        $checkiaas = Capsule::table('tbladdonmodules')->select('*')->where('module','=','opennebulavdc')->get();
+        if($checkiaas) {
+            $param['uid'] = $uid;
+            $param['time'] = $time;
+            $param['balance'] = $balance;
+
+            $params = array(
+                array(
+                'uid' => $uid,
+                'time' => $time,
+                'balance' => $balance
+                ),
+            );
+
+            logModuleCall(
+                'onconnector',
+                __FUNCTION__,
+                'test',
+                $params
+            );
+            $json = $this->zmqCommunication("IaaS_Gate", $params);
+        }
+
+        return json_decode($json,true);
+    }
+
+    public function SuspendUserIaas($uid){
+        $checkiaas = Capsule::table('tbladdonmodules')->select('*')->where('module','=','opennebulavdc')->get();
+        if($checkiaas) {
+            $params = array($uid);
+            $json = $this->zmqCommunication("SuspendUser", $params);
+            return json_decode($json,true);
+        }
+    }
+
+    public function UnSuspendUserIaas($uid){
+        $checkiaas = Capsule::table('tbladdonmodules')->select('*')->where('module','=','opennebulavdc')->get();
+        if($checkiaas) {
+            $params = array($uid);
+            $json = $this->zmqCommunication("UnsuspendUser", $params);
+            return json_decode($json,true);
+        }
+    }
 
     public function NewAccount($login, $pass, $templateid, $groupid, $rootpass, $trial, $services, $ansiblebool, $serviceid)
     {

@@ -32,10 +32,12 @@ class ActivateAnsible
                 ->select('body','name')
                 ->where('id',$key)
                 ->first();
+
+
             $YamlArray=Yaml::parse($YamlString->body);
             $YamlArray[0]['vars']=$value;
-            $YamlArray[0]['hosts']='{{group}}';
-            $this->arrayResult[$YamlString->name] = htmlspecialchars_decode(Yaml::dump($YamlArray));
+            $YamlArray[0]['hosts']='<%group%>';
+            $this->arrayResult[$YamlString->name] = Yaml::dump($YamlArray,6);
         }
     }
 
@@ -94,7 +96,7 @@ class ActivateAnsible
             ->where('id',$itemId)
             ->first();
         $YamlArray=Yaml::parse($YamlString->body);
-        $this->arrayVariable[$itemId]['ids']=$YamlArray[0]['vars'];
+        $this->arrayVariable[$itemId]=$YamlArray[0]['vars'];
     }
 
     protected function setVariableInYaml(){

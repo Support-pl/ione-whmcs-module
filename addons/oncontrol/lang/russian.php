@@ -119,4 +119,8 @@ $_ADDONLANG['errorname']='Error: Имя не может быть пустым';
 $_ADDONLANG['errorname2']='Error: Имя должно быть уникальным';
 $_ADDONLANG['errorname3']='Error: Тело не может быть пустым';
 $_ADDONLANG['customfield']='Иммунитет (название поля)';
+$_ADDONLANG['updok']='Успешно обновлено:';
+$_ADDONLANG['updok2']='Данные успешно обновлены';
+$_ADDONLANG['deleteall']='Удалить все данные при удалении модуля';
+$_ADDONLANG['azureserver']='Настройки Azure';
 ?>

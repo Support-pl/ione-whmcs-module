@@ -1,4 +1,5 @@
 <?
+ini_set('display_errors', 0);
 $result = $this->onconnect->compare_info();
 $freeIP = $result['result']['2']['0'];
 ?>

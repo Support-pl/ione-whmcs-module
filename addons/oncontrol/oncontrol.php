@@ -3,6 +3,7 @@
     die( "This file cannot be accessed directly" );*/
 
 use WHMCS\Database\Capsule;
+ini_set('display_errors', 0);
 
 
 function oncontrol_config() {
@@ -75,22 +76,29 @@ function oncontrol_activate()
 
 }
 
-function oncontrol_deactivate()
+function oncontrol_deactivate($vars)
 {
-    $query = "DROP TABLE `mod_onconfiguratorAddon`";
-    $result = full_query($query);
+    $deletedate = Capsule::table('tblconfiguration')->where('setting', 'ione_delete')->get();
+    if ($deletedate[0]->value == 'on'){
+        $query = "DROP TABLE `mod_onconfiguratorAddon`";
+        $result = full_query($query);
 
-    $query = "DROP TABLE `mod_onconfiguratorOS`";
-    $result = full_query($query);
+        $query = "DROP TABLE `mod_onconfiguratorOS`";
+        $result = full_query($query);
 
-    $query = "DROP TABLE `mod_on_user`";
-    $result = full_query($query);
+        $query = "DROP TABLE `mod_on_user`";
+        $result = full_query($query);
 
-    $query = "DROP TABLE `mod_iOne_vmlist_cache`";
-    $result = full_query($query);
+        $query = "DROP TABLE `mod_iOne_vmlist_cache`";
+        $result = full_query($query);
 
-    $query = "DROP TABLE `mod_onconfigurator`";
-    $result = full_query($query);
+        $query = "DROP TABLE `mod_onconfigurator`";
+        $result = full_query($query);
+
+        return array('status'=>'success','description'=>'All data is deleted');
+    }else{
+        return array('status'=>'success','description'=>'Module removed');
+    }
 }
 
 

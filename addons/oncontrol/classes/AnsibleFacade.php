@@ -98,20 +98,46 @@ class AnsibleFacade{
         $this->mainModuleActivate->activate($_GET['serviceId'],$this->LANG);
         pageActivation();
     }
+    public function printError($text,$errorText)
+    {
+        printf('<div class="errorbox">
+        <strong class="title">%s</strong><br>
+        %s</div>',$text,$errorText);
+    }
     public function change(){
         if (is_array($_POST['upgrade'])) {
             if (isset($_POST['name'])) {
-                $this->comand->updateAnsible($_POST);
+                extract($_POST);
+                if(empty($name)){
+                    $this->printError($this->LANG['errorname']);
+                    $error = true;
+                }
+                if(Capsule::table( 'mod_onconfiguratorAddon' )->where('name',$name)->first()){
+                    $this->printError($this->LANG['errorname2']);
+                    $error = true;
+                }
+                if (empty($body)){
+                    $this->printError($this->LANG['errorname3']);
+                    $error = true;
+                }
+                if ($error != true){
+                    $this->comand->updateAnsible($_POST, $this->LANG);
+                    $this->requireFile('allansible.php');
+                    return;
+                }
+
             }
             $this->updateDate = Capsule::table('mod_onconfiguratorAddon')
                     ->where('id', key($_POST['upgrade']))
                     ->first();
+            extract($_POST);
             $this->updateDate->check = explode('/', $this->updateDate->os);
             $this->requireFile('interface.php');
         } elseif (isset($_POST['del'])) {
             $this->comand->deleteAnsible($_POST,$this->LANG);
             $this->requireFile('allansible.php');
         } elseif (isset($_POST['activate'])){
+            print_r($_POST);
               $ids=$this->comand->getPostIds();
               $this->mainModuleActivate->setIds($ids);
               $this->mainModuleActivate->activate($_GET['serviceId'],$this->LANG);
