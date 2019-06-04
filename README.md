@@ -5,7 +5,7 @@ Manage and account your Virtual Infrastructure using IOpenNebula and WHMCS
 
 # Installation
 
-Before you start, don't forget to install and configure IONe Cloud at your OpenNebula. [Manual here](https://docs.ione-cloud.net/).
+Before you start, don't forget to install and configure IONe Cloud at your OpenNebula. [Manual here](https://github.com/ione-cloud/ione-sunstone).
 
 ## 1. WHMCS Pre-configure
 
