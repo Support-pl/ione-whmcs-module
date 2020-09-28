@@ -1,6 +1,5 @@
 <?php
 use WHMCS\Database\Capsule;
-ini_set('display_errors', 0);
 class Loader{
     protected $vars;
     protected $LANG;
@@ -14,7 +13,7 @@ class Loader{
         require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/servers/onconnector/lib/ONConnect.php');
         $this->onconnect = new ONConnect();
         ini_set('error_reporting', E_ALL);
-        ini_set('display_errors', 0);
+        ini_set('display_errors', 1);
         ini_set('display_startup_errors', 1);
         $this->vars = $vars;
         $this->LANG = $this->vars['_lang'];
@@ -23,7 +22,7 @@ class Loader{
         $pageUrl['mod'] = $this->mod;
         $pageUrl['tabs'] = $this->tabs;
         $pageUrl = http_build_query($pageUrl);
-        $this->modulelink=$vars['modulelink'].'&'.$pageUrl;
+				$this->modulelink=$vars['modulelink'].'&'.$pageUrl;
     }
 
     private function addOrUpdate($name,$value){
@@ -50,12 +49,11 @@ class Loader{
         ?>
             <div class="nav-menu">
                   <ul class="nav nav-tabs">
-                      <li class=" <? if($this->tabs=='vmlist') {print 'active';};?>"><a onclick="$('.loading').attr('hidden',false);" href="<?=$this->vars['modulelink']?>&tabs=vmlist"><span class="glyphicon glyphicon-th-list"></span> <?=$this->LANG['tabsvmlist']?></a></li>
-                      <li class=" <? if($this->tabs=='configuration') {print 'active';};?>"><a onclick="$('.loading').attr('hidden',false);" href="<?=$this->vars['modulelink']?>&tabs=configuration"><span class="glyphicon glyphicon-cog"></span> <?=$this->LANG['tabsconfiguration']?></a></li>
-                      <li class=" <? if($this->tabs=='ansible') {print 'active';};?>"><a onclick="$('.loading').attr('hidden',false);" href="<?=$this->vars['modulelink']?>&tabs=ansible&mod=ansibledb"><span class="glyphicon glyphicon-ok"></span> <?=$this->LANG['tabsansible']?></a></li>
+                      <li class=" <?php if($this->tabs=='vmlist') {print 'active';};?>"><a onclick="$('.loading').attr('hidden',false);" href="<?=$this->vars['modulelink']?>&tabs=vmlist"><span class="glyphicon glyphicon-th-list"></span> <?=$this->LANG['tabsvmlist']?></a></li>
+                      <li class=" <?php if($this->tabs=='configuration') {print 'active';};?>"><a onclick="$('.loading').attr('hidden',false);" href="<?=$this->vars['modulelink']?>&tabs=configuration"><span class="glyphicon glyphicon-cog"></span> <?=$this->LANG['tabsconfiguration']?></a></li>
                   </ul>
             </div>
-        <?
+        <?php
     }
 
     private function breadCrumbs()
@@ -64,11 +62,11 @@ class Loader{
            <div>
                   <ul class="breadcrumb" onclick="$('.loading').attr('hidden',false);">
                       <li><a onclick="$('.loading').attr('hidden',false);" href="<?=$this->vars['modulelink']?>"><span class="glyphicon glyphicon-home"></span></a> <span class="divider">/</span></li>
-                      <? if($this->tabs){ printf('<li><a onclick="$(\'.loading\').attr(\'hidden\',false);" href="%s&tabs=%s">%s</a> <span class="divider">/</span></li>',$this->vars['modulelink'],$this->tabs,$this->LANG['tabs'.$this->tabs]);}?>
-                      <? if($this->mod){ printf('<li><a onclick="$(\'.loading\').attr(\'hidden\',false);" href="%s&tabs=%s&mod=%s">%s</a> <span class="divider">/</span></li>',$this->vars['modulelink'],$this->tabs,$this->mod,$this->mod);}?>
+                      <?php if($this->tabs){ printf('<li><a onclick="$(\'.loading\').attr(\'hidden\',false);" href="%s&tabs=%s">%s</a> <span class="divider">/</span></li>',$this->vars['modulelink'],$this->tabs,$this->LANG['tabs'.$this->tabs]);}?>
+                      <?php if($this->mod){ printf('<li><a onclick="$(\'.loading\').attr(\'hidden\',false);" href="%s&tabs=%s&mod=%s">%s</a> <span class="divider">/</span></li>',$this->vars['modulelink'],$this->tabs,$this->mod,$this->mod);}?>
                   </ul>
            </div>
-        <?
+        <?php
     }
 
     public function constructPage()
@@ -92,7 +90,7 @@ class Loader{
         <div hidden class="loading" style="position: absolute; z-index: 1000000;top:200px;left:47%;">
             <img src="/modules/addons/oncontrol/img/loading.gif">
         </div>
-    <?}
+    <?php }
 
     public function constructPageFirstStart()
     {
@@ -111,7 +109,7 @@ class Loader{
                 <?=$this->loadPageContent();?>
             </div>
         </div>
-    <?}
+    <?php }
 
 
     public function loadPageMenu()

@@ -30,14 +30,14 @@ function vmlist_javaScripts()
                     if(this.getValue().length>1 && (valueSearch.indexOf('notInWhmcs')!=-1)){
                         this.clear();
                         this.setValue('notInWhmcs');
-                        $.growl.warning({ message: "Недопустимая комбинация параметров в \"фильтр по проблеме\"" });
+                        $.growl.warning({ message: "invalid combination of parameters in \"filter by issue\"" });
                     };
                 }
             });
         });
 
     </script>
-<?}
+<?php }
 
 $start = microtime(true);
 
@@ -51,9 +51,9 @@ $arrayVariant=[
 ];
 
 $arrayProblems=[
-    'notInWhmcs'=>'Отсутствующие в WHMCS',
-    'hasError'=>'Заполнены с ошибками',
-    'noStatus'=>'Не совпадают статусы'
+    'notInWhmcs'=>'Missing in WHMCS',
+    'hasError'=>'Filled with errors',
+    'noStatus'=>'Statuses do not match'
 ];
 
 $searchStatusWhmcs=$_REQUEST['statusWhmcs'];

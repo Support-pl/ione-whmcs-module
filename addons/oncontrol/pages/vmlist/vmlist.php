@@ -1,6 +1,6 @@
 <?php
 use WHMCS\Database\Capsule;
-ini_set('display_errors', 0);
+
 function vmlist_javaScripts()
 {?>
     <script>
@@ -37,7 +37,7 @@ function vmlist_javaScripts()
         });
 
     </script>
-<?}
+<?php }
 
 $start = microtime(true);
 vmlist_javaScripts();
@@ -90,7 +90,7 @@ if(!$searchHost){
     $searchHost=$hostsON;
 }
 
-if(in_array('notInWhmcs',$smartStatus)){     //missing in whmcs
+if(in_array('notInWhmcs',$smartStatus)){
     $loginWhmcs=Capsule::table('tblhosting')
         ->join('mod_on_user','mod_on_user.id_service','=','tblhosting.id')
         ->lists('vmid');
@@ -138,8 +138,8 @@ if(!$page) {
     require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/servers/onconnector/lib/ONConnect.php');
     $onconnect = new ONConnect();
     $dataON = $onconnect->compare_info();
-    $userON = $dataON['result'][0];
-    $hostsON = $dataON['result'][1];
+    $userON = $dataON['response'][0];
+    $hostsON = $dataON['response'][1];
         if(count($userON)>0) {
             $answerCount = Capsule::table('mod_iOne_vmlist_cache')
                 ->truncate();
@@ -319,36 +319,36 @@ $LANG=$this->vars['_lang'];
                         <li class="list-group-item">
                             <label for="host"><?=$LANG['thHost']?></label>
                             <select id="host" name="host[]" multiple="multiple">
-                                <?foreach ($hostsON as $host):?>
-                                    <option value="<?=$host?>" <? if(in_array($host,$searchHost)){print 'selected';}?>><?=$host?></option>
-                                <?endforeach;?>
+                                <?php foreach ($hostsON as $host):?>
+                                    <option value="<?=$host?>" <?php if(in_array($host,$searchHost)){print 'selected';}?>><?=$host?></option>
+                                <?php endforeach;?>
                             </select>
                         </li>
 
                         <li class="list-group-item">
                             <label for="statusWhmcs"><?=$LANG['thStatusWHMCS']?></label>
                             <select id="statusWhmcs" name="statusWhmcs[]" multiple="multiple">
-                                <?foreach ($satusWhmcs as $status):?>
-                                    <option value="<?=$status?>" <? if(in_array($status,$searchStatusWhmcs)){print 'selected';}?>><?=$status?></option>
-                                <?endforeach;?>
+                                <?php foreach ($satusWhmcs as $status):?>
+                                    <option value="<?=$status?>" <?php if(in_array($status,$searchStatusWhmcs)){print 'selected';}?>><?=$status?></option>
+                                <?php endforeach;?>
                             </select>
                         </li>
 
                         <li class="list-group-item">
                             <label for="statusOn"><?=$LANG['thStatusOpenNebula']?></label>
                             <select id="statusOn" name="statusOn[]" multiple="multiple">
-                                <?foreach ($satesON as $sate):?>
-                                    <option value="<?=$sate?>" <? if(in_array($sate,$statusOn)){print 'selected';}?>><?=$sate?></option>
-                                <?endforeach;?>
+                                <?php foreach ($satesON as $sate):?>
+                                    <option value="<?=$sate?>" <?php if(in_array($sate,$statusOn)){print 'selected';}?>><?=$sate?></option>
+                                <?php endforeach;?>
                             </select>
                         </li>
 
                         <li class="list-group-item">
                             <label for="statusOn"><?=$LANG['filterByProblem']?></label>
                             <select id="selectFilterStatus" name="selectFilterStatus[]" multiple="multiple">
-                                <?foreach ($arrayProblems as $codeProblem=>$problem):?>
-                                    <option value="<?=$codeProblem?>" <? if(in_array($codeProblem,$smartStatus)){print 'selected';}?>><?=$problem?></option>
-                                <?endforeach;?>
+                                <?php foreach ($arrayProblems as $codeProblem=>$problem):?>
+                                    <option value="<?=$codeProblem?>" <?php if(in_array($codeProblem,$smartStatus)){print 'selected';}?>><?=$problem?></option>
+                                <?php endforeach;?>
                             </select>
                         </li>
                     </ul>
@@ -376,7 +376,7 @@ $LANG=$this->vars['_lang'];
         </tr>
         </thead>
 
-        <?foreach ($userWHMCS as $oneUser):?>
+        <?php foreach ($userWHMCS as $oneUser):?>
             <tr class='<?=$oneUser->col?>'>
                 <td><a href="/admin/clientssummary.php?userid=<?=$oneUser->userid?>" target="_blank"><?=$oneUser->userid?></a></td>
                 <td><a href="/admin/clientsservices.php?userid=<?=$oneUser->userid?>&id=<?=$oneUser->id_service?>" target="_blank"><?=$oneUser->id_service?></a></td>
@@ -391,15 +391,15 @@ $LANG=$this->vars['_lang'];
                     <a href="<?=$this->vars['modulelink'].'&tabs=vmlist&mod=panel&serviceId='.$oneUser->id_service?>" class="btn btn-info"><?=$LANG['modEdit']?></a>
                 </td>
             </tr>
-        <?endforeach;?>
+        <?php endforeach;?>
     </table>
     <div class="row">
         <div class="col-lg-10 col-mg-10">
             <ul class="pagination">
                 <li><a href="<?=$this->modulelink?>&page=1&<?=$pageGetUrl?>">«</a></li>
-                <? for($i=$minPage;$i<=$maxPage;$i++):?>
+                <?php for($i=$minPage;$i<=$maxPage;$i++):?>
                     <li class="<?php if($i==$page){print 'active';};?>"><a href="<?=$this->modulelink?>&page=<?=$i?>&<?=$pageGetUrl?>"><?=$i?></a></li>
-                <? endfor;?>
+                <?php endfor;?>
                 <li><a href="<?=$this->modulelink?>&page=<?=$pageAll?>&<?=$pageGetUrl?>">»</a></li>
             </ul>
         </div>
@@ -409,5 +409,5 @@ $LANG=$this->vars['_lang'];
         </div>
     </div>
 
-<?
+<?php
 print ($LANG['timescript'].': '.(microtime(true) - $start).' '.$LANG['second'] );

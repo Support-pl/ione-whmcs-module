@@ -2,7 +2,6 @@
 if( !defined( "WHMCS" ) )
     die( "This file cannot be accessed directly" );
 use WHMCS\Database\Capsule;
-ini_set('display_errors', 0);
 
 function onconfigurator_errorMessage($bigText,$allText){
     printf('<div class="errorbox">
@@ -181,7 +180,7 @@ $tariffs=Capsule::table('mod_onconfiguratorOS')->get();
             <textarea name="descriptions" class="form-control" id="descriptions"></textarea>
             <small id="descriptionsHelp" class="form-text text-muted"><?=$this->LANG['optfield']?></small>
         </div>
-        <input id="actionButton" type="submit" name="action[edit]" value="Принять изменения" class="btn btn-info">
+        <input id="actionButton" type="submit" name="action[edit]" value="Accept changes" class="btn btn-info">
     </form>
 </div>
 

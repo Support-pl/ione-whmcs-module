@@ -1,11 +1,9 @@
 <?php
 use WHMCS\Database\Capsule;
-use Symfony\Component\Yaml\Yaml;
 
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
-ini_set('display_errors', 0);
 
 set_time_limit(0);
 
@@ -96,10 +94,12 @@ function onconnector_ConfigOptions()
     );
 }
 
+
+
+
 function onconnector_CreateAccount(array $params)
 {try
 {
-
     ini_set('error_reporting', E_ALL);
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
@@ -112,6 +112,7 @@ function onconnector_CreateAccount(array $params)
         ->join('tbladdons','tbladdons.id','=','tblhostingaddons.addonid')
         ->join('mod_onconfiguratorOS','mod_onconfiguratorOS.addonid','=','tblhostingaddons.addonid')
         ->first();
+
 
     $allOptions['templateid']=$templateid->templateid;
 
@@ -194,162 +195,137 @@ function onconnector_CreateAccount(array $params)
                 $allOptions['ds_type']='SSD';
                 $allOptions['iops']=1000;
                 break;
-        }
-    }
-
-    $allOptions['groupid']=$params['configoption1'];
-
-    $onaccaunt=Capsule::table('mod_on_user')
-        ->where('id_service',$params['serviceid'])
-        ->first();
-
-
-
-    $userid=$onaccaunt->userid;
-    $vmid=$onaccaunt->vmid;
-
-
-    if (!ctype_digit($userid) && !ctype_digit($vmid))
-    {
-        $ansibles=[];
-        $allOptions['ansible']=false;
-        foreach (Capsule::table( 'tblhostingaddons' )
-                     ->select('mod_onconfiguratorAddon.id')
-                     ->where('tblhostingaddons.hostingid',$params['serviceid'])
-                     ->join('mod_onconfiguratorAddon','mod_onconfiguratorAddon.Addon','=','tblhostingaddons.addonid')
-                     ->get() as $item) {
-            $ansibles[]=$item->id;
-        }
-        $isCheckAnsible=Capsule::table( 'tblconfiguration' )->where('setting','ione_use_ansible')->get();
-        if($isCheckAnsible[0]->value=='on') {
-            require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/addons/oncontrol/classes/ActivateAnsible.php');
-            $ansibleDB = new AutoActivateAnsible($params['serviceid']);
-            $allOptions['services'] = $ansibleDB->getServicesFromIds($ansibles);
-
+            }
         }
 
-        if($allOptions['services']){
-            $allOptions['ansible']=true;
-        }else{
+        $allOptions['groupid']=$params['configoption1'];
+
+        $onaccaunt=Capsule::table('mod_on_user')
+            ->where('id_service',$params['serviceid'])
+            ->first();
+
+        $userid=$onaccaunt->userid;
+        $vmid=$onaccaunt->vmid;
+
+
+        if (!is_numeric($userid) && !is_numeric($vmid))
+        {
+            $ansibles=[];
             $allOptions['ansible']=false;
-        }
+            foreach (Capsule::table( 'tblhostingaddons' )
+                         ->select('mod_onconfiguratorAddon.id')
+                         ->where('tblhostingaddons.hostingid',$params['serviceid'])
+                         ->join('mod_onconfiguratorAddon','mod_onconfiguratorAddon.Addon','=','tblhostingaddons.addonid')
+                         ->get() as $item) {
+                $ansibles[]=$item->id;
+            }
+
+            if($allOptions['services']){
+                $allOptions['ansible']=true;
+            }else{
+                $allOptions['ansible']=false;
+            }
 
 
-        $allOptions['password'] = passgenerator();
-        $allOptions['login'] = 'user_' . $params['serviceid'];
+            $allOptions['password'] = passgenerator();
+            $allOptions['login'] = 'user_' . $params['serviceid'];
 
-        $postData = array(
-            'password2' => passgenerator(),
-        );
-
-        $allOptions['passwd'] = $postData['password2'];
-
-        $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
-        $adminUsername = $adminlog[0]->value;
-
-        $passroot = localAPI('EncryptPassword', $postData,$adminUsername);
-        if ($passroot['result'] == 'error'){
-            return "Error adminuser. Check configure module.";
-        }
-
-        require_once("lib/ONConnect.php");
-            // Record the error in WHMCS's module log.
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $allOptions
-        );
-
-        if(!$allOptions['iops'])                                // If IOPS is null
-        {
-            return "Error allocating a new virtual machine template. IOPS attribute must be a positive integer value";
-        }
-
-        if(!$allOptions['cpu'])                                // If CPU is null
-        {
-            return "Error allocating a new virtual machine template. CPU attribute must be a positive integer value";
-        }
-
-        if(!$allOptions['ram'])                                // If RAM is null
-        {
-            return "Error allocating a new virtual machine template. RAM attribute must be a positive integer value";
-        }
-
-        if(!$allOptions['drive'])                                // If Drive is null
-        {
-            return "Error allocating a new virtual machine template. Drive attribute must be a positive integer value";
-        }
-        if(!($allOptions['ds_type'] == 'HDD' || $allOptions['ds_type'] == 'SSD')) // If drive type is not set
-        {
-            return "Error allocating a new virtual machine template. Disk type attribute must be (HDD/SSD) constant value";
-        }
-
-        if(!($allOptions['units'] == 'GB' || $allOptions['units'] == 'TB' || $allOptions['units'] == 'MB' || $allOptions['units'] == 'KB' || $allOptions['units'] == 'B')) // If units is not set
-        {
-            return "Error allocating a new virtual machine template. Units attribute must be (TB/GB/MB/KB/B) constant value";
-        }
-
-
-        $azure =  Capsule::table( 'mod_azure_servers' )->where('idproduct','=',$params['pid'])->get();
-        if($azure != null){
-            $allOptions['release'] = true;
-            $allOptions['username'] = 'azuser';
-            $allOptions['extra'] = array('type' => 'azure',
-                'instance_size' => $azurename);
-            logModuleCall(
-                'onconnector',
-                'azure',
-                $params,
-                $allOptions
-            );
-        }
-
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $allOptions
-        );
-
-        $onconnect = new ONConnect( $params['serverip'],$params['serverport'] );
-        $result = $onconnect->createVMwithSpecs($allOptions);
-
-        if($result['result']['error']=='UserAllocateError')                 //If user already exists(name taken);
-        {
-            return "User user_$params[serviceid] already exists in ON";
-        }
-
-        if($result['result']['exeption']){                                  //If some unhandled Exeption
-            return $result['result']['exeption'];
-        }
-
-        if ($result['result']['error']=='TemplateLoadError')                //If template not set
-        {
-            return 'error: Template load error';
-        }
-
-        if(!$result['result']){                                             //If answer is empty.
-            return 'error: Error getting data from IONe';
-        }
-
-        Capsule::table( 'tblhosting' )
-            ->where('id',$params['serviceid'])
-            ->update(
-                array (
-                    'dedicatedip' => $result['result']['ip'],
-                    'username'=>$root,
-                    'password'=>$passroot['password'],
-                    'domain'=>$result['result']['ip'],
-                )
+            $postData = array(
+                'password2' => passgenerator(),
             );
 
-        addinbd( $params['serviceid'], $allOptions['login'], $allOptions['password'], $result['result']['userid'], $result['result']['vmid']);
 
-    }
-    else {
-        return 'error: Only one account for one service';
-    }
+            $allOptions['passwd'] = $postData['password2'];
+
+            $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
+            $adminUsername = $adminlog[0]->value;
+
+            $passroot = localAPI('EncryptPassword', $postData,$adminUsername);
+            if ($passroot['result'] == 'error'){
+                return "Error adminuser. Check configure module.";
+            }
+
+            require_once("lib/ONConnect.php");
+
+            if(!$allOptions['iops'])                                // If IOPS is null
+            {
+                return "Error allocating a new virtual machine template. IOPS attribute must be a positive integer value";
+            }
+
+            if(!$allOptions['cpu'])                                // If CPU is null
+            {
+                return "Error allocating a new virtual machine template. CPU attribute must be a positive integer value";
+            }
+
+            if(!$allOptions['ram'])                                // If RAM is null
+            {
+                return "Error allocating a new virtual machine template. RAM attribute must be a positive integer value";
+            }
+
+            if(!$allOptions['drive'])                                // If Drive is null
+            {
+                return "Error allocating a new virtual machine template. Drive attribute must be a positive integer value";
+            }
+            if(!($allOptions['ds_type'] == 'HDD' || $allOptions['ds_type'] == 'SSD')) // If drive type is not set
+            {
+                return "Error allocating a new virtual machine template. Disk type attribute must be (HDD/SSD) constant value";
+            }
+
+            if(!($allOptions['units'] == 'GB' || $allOptions['units'] == 'TB' || $allOptions['units'] == 'MB' || $allOptions['units'] == 'KB' || $allOptions['units'] == 'B')) // If units is not set
+            {
+                return "Error allocating a new virtual machine template. Units attribute must be (TB/GB/MB/KB/B) constant value";
+            }
+
+
+
+            $onconnect = new ONConnect( $params['serverip'],$params['serverport'] );
+            $result = $onconnect->createVMwithSpecs($allOptions);
+
+
+            if($result->response->error==true)
+            {
+                return 'error: '.$result->errorMessage;
+            }
+
+            if($result->response->error=='UserAllocateError')                 //If user already exists(name taken);
+            {
+                return "User user_$params[serviceid] already exists in ON";
+            }
+
+
+            if($result->response->exeption){                                  //If some unhandled Exeption
+                return $result['result']['exeption'];
+            }
+
+            if ($result->response->error=='TemplateLoadError')                //If template not set
+            {
+                return 'error: Template load error';
+            }
+
+            if(!$result->response){                                             //If answer is empty.
+
+                return 'error: Error getting data from IONe';
+            }
+
+            Capsule::table( 'tblhosting' )
+                ->where('id',$params['serviceid'])
+                ->update(
+                    array (
+                        'dedicatedip' => $result->response->ip,
+                        'username'=>$root,
+                        'password'=>$passroot['password'],
+                        'domain'=>$result->response->ip,
+                    )
+                );
+
+            addinbd( $params['serviceid'], $allOptions['login'], $allOptions['password'], $result->response->userid, $result->response->vmid);
+
+        }
+        else
+        {
+            return 'error: Only one account for one service';
+        }
+
 }
 
 catch (Exception $e)
@@ -387,7 +363,7 @@ function onconnector_SuspendAccount(array $params)
         ->where('hostingid', $params['serviceid'])
         ->update(['status' => 'Suspended']);
 
-    if (ctype_digit($vmid)) {
+    if (is_numeric($vmid)) {
         require_once("lib/ONConnect.php");
         $onconnect = new ONConnect($params['serverip']);
         $result = $onconnect->Suspend($vmid, $reason);
@@ -401,41 +377,43 @@ function onconnector_SuspendAccount(array $params)
             'priority' => 'Medium',
             'markdown' => true,
         );
-
-        $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
-        $adminUsername = $adminlog[0]->value;
+        $adminlog = Capsule::table('tbladmins')
+            ->select('username')->where('disabled', '=', '0')->get();
+        $adminUsername = $adminlog[0]->username;
 
         $results = localAPI($command, $postData, $adminUsername);
         return "error: Auth data is incorrect";
     }
+
     return 'success';
 }
 
 function onconnector_ChangePackage(array $params)
 {
-    $onaccaunt=Capsule::table('mod_on_user')
-        ->select('vmid')
-        ->where('id_service',$params['serviceid'])
-        ->first();                                    // Getting user_id, vmid, Login, Password,
-    $vmid=$onaccaunt->vmid;
-    if(ctype_digit($vmid)) {
-        require_once("lib/ONConnect.php");
-        $onconnect = new ONConnect($params['serverip']);
-        $result = $onconnect->Unsuspend($vmid);
-        if ($result['result']['userid']) {
-            Capsule::table('mod_on_user')
-                ->where('id_service', $params['serviceid'])
-                ->update(
-                    array(
-                        'userid' => $result['result']['userid'],
-                    )
-                );
+        $onaccaunt=Capsule::table('mod_on_user')
+            ->select('vmid')
+            ->where('id_service',$params['serviceid'])
+            ->first();                                    // Getting user_id, vmid, Login, Password,
+        $vmid=$onaccaunt->vmid;
+        if(is_numeric($vmid)) {
+            require_once("lib/ONConnect.php");
+            $onconnect = new ONConnect($params['serverip']);
+            $result = $onconnect->Unsuspend($vmid);
+            if ($result->response->userid) {
+                Capsule::table('mod_on_user')
+                    ->where('id_service', $params['serviceid'])
+                    ->update(
+                        array(
+                            'userid' => $result->response->userid,
+                        )
+                    );
+            }
+            $result = json_encode( $result );
         }
-        $result = json_encode( $result );
-    }
-    else {
-        return "error: Auth data is incorrect";
-    }
+        else
+        {
+            return "error: Auth data is incorrect";
+        }
     return 'success';
 }
 
@@ -453,24 +431,27 @@ function onconnector_UnsuspendAccount(array $params)
 
     $vmid = $onaccaunt->vmid;                             // Putting query-results to vars
 
-    if (ctype_digit($vmid)) {
+    if (is_numeric($vmid)) {
         require_once("lib/ONConnect.php");
         $onconnect = new ONConnect($params['serverip']);
         $result = $onconnect->Unsuspend($vmid);
     } else {
         return "error: Auth data is incorrect";
     }
+
     return 'success';
 }
 
 function onconnector_TerminateAccount(array $params)
 {
 
+
     try {
         $onaccaunt=Capsule::table('mod_on_user')->where('id_service',$params['serviceid'])->first();
         $userid=$onaccaunt->userid;
         $vmid=$onaccaunt->vmid;
-        if(ctype_digit($userid) && ctype_digit($vmid))
+
+        if(is_numeric($userid) && is_numeric($vmid))
         {
             require_once( "lib/ONConnect.php" );
             $onconnect = new ONConnect($params['serverip']);
@@ -479,6 +460,7 @@ function onconnector_TerminateAccount(array $params)
         }
         else
         {
+
             return "error: Auth data is incorrect";
         }
     } catch (Exception $e) {
@@ -493,27 +475,6 @@ function onconnector_TerminateAccount(array $params)
         return $e->getMessage();
     }
     return 'success';
-}
-
-function onconnector_TestConnection(array $params)
-{
-        require_once( "lib/ONConnect.php" );
-        $onconnect= new ONConnect($params['serverip']);
-        $result=$onconnect->Test();
-        if($result['result']=='PONG')
-        {
-            $success = true;
-        }
-        else
-        {
-            $success = false;
-            $errorMsg = $result['result'] ;
-        }
-
-    return array(
-        'success' => $success,
-        'error' => $errorMsg,
-    );
 }
 
 function onconnector_AdminCustomButtonArray()
@@ -531,7 +492,7 @@ function onconnector_restart(array $params)
         require_once( "lib/ONConnect.php" );
         $onaccaunt=Capsule::table('mod_on_user')->where('id_service',$params['serviceid'])->first();
         $vmid=$onaccaunt->vmid;
-        if(ctype_digit($vmid)) {
+        if(is_numeric($vmid)) {
             $onconnect = new ONConnect( $params['serverip'] );
             $result = $onconnect->Reboot( $vmid );
         }
@@ -566,7 +527,7 @@ function onconnector_down(array $params)
             ->where('id_service',$params['serviceid'])
             ->first();
         $vmid=$onaccaunt->vmid;
-        if(ctype_digit($vmid)) {
+        if(is_numeric($vmid)) {
             $onconnect = new ONConnect( $params['serverip'] );
             $result = $onconnect->Shutdown( $vmid );
         }
@@ -592,6 +553,7 @@ function onconnector_down(array $params)
 
     return 'success';
 }
+
 function onconnector_buttonForeFunction(array $params){
     require_once("lib/ONConnect.php");
 
@@ -599,206 +561,31 @@ function onconnector_buttonForeFunction(array $params){
     $user= 'user_'.$params['serviceid'];
     $result = $onconnect->getVmByName($user);
 
-        if($result['result']['vmid']!='none') {
+        if($result->response->vmid!='none') {
             Capsule::table('mod_on_user')
                 ->where('id_service', $params['serviceid'])
                 ->update(
                     [
                         'loginon' => $user,
-                        'vmid' => $result['result']['vmid'],
-                        'userid' => $result['result']['userid']
+                        'vmid' => $result->response->vmid,
+                        'userid' => $result->response->userid
                     ]
                 );
         }
-        if($result['result']['ip']!='nil') {
+        if($result->response->ip!='nil') {
         Capsule::table('tblhosting')
             ->where('id',$params['serviceid'])
             ->update(
                 [
-                    'dedicatedip'=>$result['result']['ip']
+                    'dedicatedip'=>$result->response->ip
                 ]
             );
     }
 
 }
 
-function onconnector_buttonThreeFunction(array $params)
-{
-
-    try
-    {
-        $product=Capsule::table( 'tblproducts' )
-            ->where('id',$params['packageid'])
-            ->first();
-
-        $c=strpos($product->name,"RIAL VDS");
-        if (!empty($c)){
-            $trial=true;
-        }
-
-        $onaccaunt=Capsule::table('mod_on_user')
-            ->where('id_service',$params['serviceid'])
-            ->first();
-
-        $userid=$onaccaunt->userid;
-        $vmid=$onaccaunt->vmid;
-
-        if (!isset($userid) || !ctype_digit($vmid))
-        {
-            $adonbool=false;
-            foreach (Capsule::table( 'tblhostingaddons' )
-                         ->select('mod_onconfiguratorAddon.id')
-                         ->where('tblhostingaddons.hostingid',$params['serviceid'])
-                         ->join('mod_onconfiguratorAddon','mod_onconfiguratorAddon.Addon','=','tblhostingaddons.addonid')
-                         ->max('price') as $item) {
-                $addons[]=$item->id;
-            }
-
-                require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/addons/oncontrol/classes/ActivateAnsible.php');
-                $ansibleDB = new AutoActivateAnsible();
-                $ansible = $ansibleDB->getServicesFromIds($addons);
-
-                if ($ansible) {
-                    $ansiblebool = true;
-                }
-
-            $os=Capsule::table( 'tblhostingaddons' )
-                ->select('tblhostingaddons.addonid','mod_onconfigurator.templateid','mod_onconfigurator.os')
-                ->where('tblhostingaddons.hostingid',$params['serviceid'])
-                ->where('idtariff',$params['packageid'])
-                ->join('mod_onconfigurator','mod_onconfigurator.addonid','=','tblhostingaddons.addonid')
-                ->sum('mod_onconfigurator.os');
-
-            if($os){
-                if (stristr( $os->os, 'windows')!=false){
-                    $root='Administrator';
-                }
-                else{
-                    $root='root';
-                }
-                $temlaitid=$os->templateid;
-            }
-
-            $pass = passgenerator();
-            $user = 'user_' . $params['serviceid'];
-
-            $postData = array(
-                'password2' => passgenerator(),
-            );
 
 
-
-            $passroot = localAPI('EncryptPassword', $postData);
-            require_once("lib/ONConnect.php");
-
-
-            $onconnect = new ONConnect( $params['serverip'],$params['serverport'] );
-
-            $result = $onconnect->NewAccount( $user, $pass, $temlaitid, $params['configoption1'],$postData['password2'],$trial,$ansible,$ansiblebool,$params['serviceid']);
-
-            if($result['error']==true)
-            {
-                return 'error: '.$result['errorMessage'];
-            }
-            if($result['result']['error']=='UserAllocateError')                 // If user already exists;
-            {
-                return "User user_$params[serviceid] already exists in IONe";
-            }
-
-            if ($result['result']['error']=='TemplateLoadError')                // If template is not set;
-            {
-                return 'error: Template error, check template in IONe configurator';
-            }
-
-            if(!$result['result']){                                             // If answer is empty.
-                return 'error: Error getting data from IONe';
-            }
-
-            Capsule::table( 'tblhosting' )
-                ->where('id',$params['serviceid'])
-                ->update(
-                    array (
-                        'dedicatedip' => $result['result']['ip'],
-                        'username'=>$root,
-                        'password'=>$passroot['password'],
-                        'domain'=>$result['result']['ip'],
-                    )
-                );
-
-            $order=Capsule::table( 'tblhosting' )
-                ->select('orderid')
-                ->where('id',$params['serviceid'])
-                ->first();
-
-            addinbd( $params['serviceid'], $user, $pass, $result['result']['userid'], $result['result']['vmid']);
-
-        }
-        else
-        {
-            return 'error: Only one service for one account';
-        }
-    }
-
-    catch (Exception $e)
-    {
-        // Record the error in WHMCS's module log.
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $e->getMessage(),
-            $e->getTraceAsString()
-        );
-
-        return $e->getMessage();
-    }
-    return 'success';
-}
-
-function onconnector_buttonTwoFunction(array $params)
-{
-    try {
-
-        $onaccaunt=Capsule::table('mod_on_user')->where('id_service',$params['serviceid'])->first();
-        $vmid=$onaccaunt->vmid;
-        if(ctype_digit($vmid)) {
-            require_once("lib/ONConnect.php");
-            $onconnect = new ONConnect( $params['serverip'] );
-            $result = $onconnect->GetIP( $vmid );
-        }
-        else{
-            return "error: Auth data is incorrect";
-        }
-        Capsule::table( 'tblhosting' )
-            ->where('id',$params['serviceid'])
-            ->update(
-                array (
-                    'dedicatedip' => $result['result'],
-                    'username'=>'root',
-                    'password'=>'l+sxDZmZrK6Ch1AKRVwTatw1wPP4zlCJxaArkCsCkp1a',
-                    'domain'=>$result['result'],
-                ) );
-
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $result,
-            $result);
-    } catch (Exception $e) {
-        // Record the error in WHMCS's module log.
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $e->getMessage(),
-            $e->getTraceAsString()
-        );
-
-        return $e->getMessage();
-    }
-    return 'success';
-}
 
 function onconnector_AdminServicesTabFields(array $params)
 {
@@ -814,12 +601,12 @@ try{
         $vmid=$onaccaunt->vmid;
     }
 
-       $fieldsarray = array(
-           'Login ON' => '<input type="text" name="loginON" size="30" value="'.$loginon.'" />',
-           'Passwordon ON' => '<input type="text" name="passwordON" size="30" value="'.$password.'" />',
-           'userid ON' => '<input type="text" name="useridON" size="30" value="'.$userid.'" />',
-           'vmid ON' => '<input type="text" name="vmidON" size="30" value="'.$vmid.'" />',
-       );
+    $fieldsarray = array(
+        'Login ON' => '<input type="text" name="loginON" size="30" value="'.$loginon.'" />',
+        'Passwordon ON' => '<input type="text" name="passwordON" size="30" value="'.$password.'" />',
+        'userid ON' => '<input type="text" name="useridON" size="30" value="'.$userid.'" />',
+        'vmid ON' => '<input type="text" name="vmidON" size="30" value="'.$vmid.'" />',
+    );
 
 }
     catch (Exception $e) {
@@ -935,15 +722,4 @@ function onconnector_ClientArea(array $params)
     }
 }
 
-function onconnector_mycustomfunction($vars) {
-    return array(
-        'templatefile' => 'templates/mysimplepanel',
-        'breadcrumb' => array(
-            'stepurl.php?action=this&var=that' => 'Custom Function',
-        ),
-        'vars' => array(
-            'test1' => 'hello',
-            'test2' => 'world',
-        ),
-    );
-}
+
