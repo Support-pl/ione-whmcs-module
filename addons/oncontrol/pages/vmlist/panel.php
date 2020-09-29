@@ -1,5 +1,5 @@
 <?php
-ini_set('display_errors', 0);
+
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
@@ -7,7 +7,7 @@ if (!defined("WHMCS")) {
 use WHMCS\Database\Capsule as Capsule;
 
 
-if (isset($_POST['action']))                                            // <-- ACTIONS LIKE SUSPEND/UNSUSPEND ARE HERE
+if (isset($_POST['action']))
 {
     require_once 'service_manager.php';
 }
@@ -34,8 +34,6 @@ $service_user = Capsule::table('tblclients')
     ->where('id', $service->userid)
     ->first();
 
-$ansibles = Capsule::table('mod_onconfiguratorAddon')
-    ->get();
 
 $machineInfo = Capsule::table('mod_on_user')
     ->where('id_service', $system_id)
@@ -47,6 +45,7 @@ $server_ip = Capsule::table('tblservers')
     ->first()->ipaddress;
 
 $snapshotList = $this->onconnect->getSnapshotList($machineInfo->vmid);
+$snapshotList = json_decode($snapshotList);
 if ($snapshotList['result']['0'] == '') {
     unset ($snapshotList['result']['0']);
 }
@@ -57,7 +56,7 @@ $reinstal_settings = Capsule::table('tblproduct_upgrade_products')
     ->select('upgrade_product_id')
     ->get();
 
-$vm_data = $this->onconnect->getVmData($machineInfo->vmid)['result'];
+$vm_data = $this->onconnect->getVmData($machineInfo->vmid->result);
 
 $groups = [];
 foreach ($addons as $addon) {
@@ -129,8 +128,7 @@ function disable_current_state($service, $status)
 }
 
 $status = getStatusMachine($this->onconnect, $machineInfo->vmid);
-
-//SUSPEND BUTTON PROPERTIES
+$status = json_decode($status);
 switch ($status['result']) {
     case 'RUNNING':
         $suspendButtonTitle = 'Suspend';
@@ -151,7 +149,7 @@ switch ($status['result']) {
 
 }
 
-// POWER BUTTON PROPERTIES
+
 switch ($status['result']) {
     case 'RUNNING':
         $powerButtonTitle = 'Power off';
@@ -170,7 +168,7 @@ switch ($status['result']) {
 }
 
 
-// REBOOT BUTTON PROPERTIES
+
 switch ($status['result']) {
     case 'RUNNING':
         break;
@@ -190,7 +188,7 @@ switch ($status['result']) {
         break;
 }
 
-$isCheckAnsible=Capsule::table( 'tblconfiguration' )->where('setting','ione_use_ansible')->get();
+$vm_data = json_decode($vm_data);
 $LANG=$this->vars['_lang'];
 $cloudlink = Capsule::table('tblconfiguration')
     ->select('value')->where('setting',ione_address)->get();
@@ -219,7 +217,7 @@ $cloudlink = Capsule::table('tblconfiguration')
                             </div>
                             <div class="col-sm-12">
                                 <b><?=$LANG['Status']?>:</b> <b id="state"
-                                                   style="font-size: 110%; border: 1px solid <? echo get_color_by_status($status['result']) ?>; color: <? echo get_color_by_status($status['result']); ?>;">
+                                                   style="font-size: 110%; border: 1px solid <?php echo get_color_by_status($status['result']) ?>; color: <?php echo get_color_by_status($status['result']); ?>;">
                                     <?= $vm_data['STATE'] ?>
                                 </b>
                             </div>
@@ -256,7 +254,7 @@ $cloudlink = Capsule::table('tblconfiguration')
                         </div>
                         <div class="col-sm-12">
 
-                            <!-- STATE MONITORING -->
+
                             <script>
                                 $(document).ready(function () {
 
@@ -394,7 +392,6 @@ $cloudlink = Capsule::table('tblconfiguration')
                     </div>
                 </form>
 
-
                 <div class="col-sm-12 text-center" style="margin-top: 20px;">
                     <a id="terminate" class="btn btn-block btn-danger"><?=$LANG['terminate']?></a>
                 </div>
@@ -489,39 +486,6 @@ $cloudlink = Capsule::table('tblconfiguration')
             </div>
         </div>
     </div>
-
-    <?if($isCheckAnsible[0]->value=='on'):?>
-    <div class="jumbotron">
-        <div class="row">
-
-            <div class="col-sm-12">
-                <h2 class="text-center"><?=$LANG['tabsansible']?>:</h2>                           <!-- ANSIBLE -->
-                <div class="form-check">
-                    <form id="ansiblesForm" action="/admin/addonmodules.php" method="GET">
-                        <?php $i = 0; ?>
-                        <?php foreach ($ansibles as $ansible): ?>
-                            <div class="col-sm-4">
-                                <input type="checkbox" name="ansibles[]" value="<?php echo $ansible->id; ?>"
-                                       id="<?php echo $ansible->name; ?>"><label
-                                    for="<?php echo $ansible->name; ?>">&#160;<?php echo $ansible->name; ?></label><br>
-                            </div>
-                            <?php $i++;
-                        endforeach; ?>
-                        <input type="hidden" name="serviceId" value="<?php echo $system_id; ?>">
-                        <div class="col-sm-12 text-center">
-                            <input type="hidden" name="module" value="oncontrol">
-                            <input type="hidden" name="tabs" value="ansible">
-                            <input type="hidden" name="mod" value="ansibledb">
-                            <input type="hidden" name="action" value="addAnsibleOnExternalLink">
-                            <input type="hidden" name="idSystem" value="<?php echo $system_id; ?>">
-                            <button class="btn btn-success" style="width: 180px; margin-top: 20px;"><?=$LANG['activate']?></button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    <?endif;?>
 
     <script type="text/javascript">
         $(document).ready(function () {

@@ -3,7 +3,6 @@
     die( "This file cannot be accessed directly" );*/
 
 use WHMCS\Database\Capsule;
-ini_set('display_errors', 0);
 
 
 function oncontrol_config() {
@@ -28,17 +27,6 @@ function oncontrol_activate()
  `login` VARCHAR(64) NOT NULL,
  `ip` VARCHAR(64) NOT NULL,
  `state` VARCHAR(64) NOT NULL,
- PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1";
-    $result = full_query($query);
-
-    $query = "CREATE TABLE `mod_onconfiguratorAddon` (
- `id` int(11) NOT NULL AUTO_INCREMENT,
- `name` VARCHAR(64) NOT NULL,
- `descriptions` VARCHAR (512),
- `body` VARCHAR(1024) NOT NULL,
- `os` VARCHAR (128),
- `Addon` INT (11),
  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1";
     $result = full_query($query);
@@ -74,15 +62,13 @@ function oncontrol_activate()
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1";
     $result = full_query($query);
 
+
 }
 
 function oncontrol_deactivate($vars)
 {
     $deletedate = Capsule::table('tblconfiguration')->where('setting', 'ione_delete')->get();
     if ($deletedate[0]->value == 'on'){
-        $query = "DROP TABLE `mod_onconfiguratorAddon`";
-        $result = full_query($query);
-
         $query = "DROP TABLE `mod_onconfiguratorOS`";
         $result = full_query($query);
 

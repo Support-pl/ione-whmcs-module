@@ -1,9 +1,7 @@
 <?php
-ini_set('display_errors', 0);
 $quotas = $this->onconnect->datastoresMonitoring();
 $quotasRam = $this->onconnect->hostsMonitoring();
 $LANG=$this->vars['_lang'];
-
 ?>
 <script>
     function progressBarPrint(name,quota) {
@@ -57,19 +55,19 @@ $LANG=$this->vars['_lang'];
 
 <div class="panel panel-info col-lg-6">
     <table class="table table-bordered table-hover table-condensed">
-        <?php foreach ($quotasRam['result'] as $quota):?>
+        <?php foreach ($quotasRam->response as $quota):?>
             <tr class="quota">
-                <td rowspan="4"><?=$quota['name']?></td>
-                <td><b><?=$LANG['cpu']?>:</b> <?=$quota['cpu']?></td>
-                <td rowspan="4"><b><?=$LANG['vmquantity']?></b> <?=$quota['running_vms']?></td>
+                <td rowspan="4"><?=$quota->name?></td>
+                <td><b><?=$LANG['cpu']?>:</b> <?=$quota->cpu?></td>
+                <td rowspan="4"><b><?=$LANG['vmquantity']?></b> <?=$quota->running_vms?></td>
             <tr class="quota">
-                <td id="cpu_<?=$quota['name']?>"></td>
+                <td id="cpu_<?=$quota->name?>"></td>
             </tr>
             <tr class="quota">
-                <td><b><?=$LANG['ram']?>:</b> <?=$quota['reserved']?>/<?=$quota['full_size']?> (<?=round($quota['reserved']/$quota['full_size']*100)?>%)</td>
+                <td><b><?=$LANG['ram']?>:</b> <?=$quota->reserved?>/<?=$quota->full_size?> (<?=round($quota->reserved/$quota->full_size*100)?>%)</td>
             </tr>
             <tr class="quota">
-                <td id="ram_<?=$quota['name']?>"></td>
+                <td id="ram_<?=$quota->name?>"></td>
             </tr>
             </tr>
         <?php endforeach;?>
@@ -78,18 +76,18 @@ $LANG=$this->vars['_lang'];
 
 <div class="panel panel-info col-lg-6">
     <table class="table table-bordered table-hover table-condensed">
-        <?php foreach ($quotas['result'] as $quota):?>
+        <?php foreach ($quotas->response as $quota):?>
             <tr class="quota">
-                <td rowspan="2"><b><?=$quota['name']?></b></td>
-                <?if(substr($quota['used'],-2) == 'GB'){
-                    $quotamod = round($quota['used']) / 1000;
+                <td rowspan="2"><b><?=$quota->name?></b></td>
+                <?php if(substr($quota->used,-2) == 'GB'){
+                    $quotamod = round($quota->used) / 1000;
                 }else{
-                    $quotamod = round($quota['used']);
+                    $quotamod = round($quota->used);
                 }
                 ?>
-                <td><?=$quota['used']?>/<?=$quota['full_size']?> (<?=round($quotamod/$quota['full_size']*100)?>%)</td>
+                <td><?=$quota->used?>/<?=$quota->full_size?> (<?=round($quotamod/$quota->full_size*100)?>%)</td>
             <tr class="quota">
-                <td id="<?=$quota['name']?>"></td>
+                <td id="<?=$quota->name?>"></td>
             </tr>
             </tr>
         <?php endforeach;?>

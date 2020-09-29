@@ -4,65 +4,6 @@ use WHMCS\Database\Capsule;
 
 
 
-function hook_onconnector_clientedit(array $params)
-{
-    try {
-
-    } catch (Exception $e) {
-        // Consider logging or reporting the error.
-    }
-}
-
-function hook_onconnector_InvoicePaid(array $params)
-{
-    try {
-        $order = Capsule::table('tblorders')
-            ->where('invoiceid', $params['invoiceid'])
-            ->get();
-
-        $tblhosting = Capsule::table('tblhosting')
-            ->where('orderid', $order[0]->id)
-            ->get();
-
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $params,
-            "Paid"
-        );
-
-        $data = Capsule::table('mod_on_user')
-            ->where('id_service', $tblhosting[0]->id)
-            ->get();
-
-        $server = Capsule::table('tblservers')
-            ->where('id', $tblhosting[0]->server)
-            ->get();
-        if (isset($server[0]->ipaddress) && ctype_digit($data[0]->userid) && ctype_digit($data[0]->vmid)) {
-
-            require_once("lib/ONConnect.php");
-            $onconnect = new ONConnect($server[0]->ipaddress);
-            $result = $onconnect->Unsuspend($data[0]->vmid);
-
-            Capsule::table('tblhosting')
-                ->where('orderid', $order[0]->id)
-                ->update(
-                    array(
-                        'domainstatus' => 'Activity',
-                    ));
-        }
-    } catch (Exception $e) {
-        logModuleCall(
-            'onconnector',
-            __FUNCTION__,
-            $params,
-            $e->getMessage(),
-            $e->getTraceAsString()
-        );
-    }
-
-}
 
 function hook_onconnector_EmailTplMergeFields(array $params)
 {
@@ -85,13 +26,15 @@ function hook_onconnector_EmailPreSend(array $params)
     return $merge_fields;
 }
 
+
+
 add_hook('AddonSuspended', 1, function ($vars) {
     $command = 'GetClientsProducts';
     $postData = array(
         'serviceid' => $vars['serviceid'],
     );                                                                      // Getting service;
     $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
-    $adminUsername = $adminlog[0]->value;                                             // Init using hell api;
+    $adminUsername = $adminlog[0]->value;
 
     $results = localAPI($command, $postData, $adminUsername);
 
@@ -111,7 +54,7 @@ add_hook('AddonSuspended', 1, function ($vars) {
             'status' => 'Active',
         );
         $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
-        $adminUsername = $adminlog[0]->value; // Optional for WHMCS 7.2 and later
+        $adminUsername = $adminlog[0]->value;
 
         $results = localAPI($command, $postData, $adminUsername);
         print_r($results);
@@ -120,140 +63,127 @@ add_hook('AddonSuspended', 1, function ($vars) {
 
 add_hook('PreModuleSuspend', 1, function ($params) {
 
-    $iaas_servers =  Capsule::table( 'mod_iaas_servers' )->where('idproduct','=',$params['pid'])->get();
-    if($iaas_servers == null) {
+    if ($params['params']['moduletype'] != 'onconnector') {
+        return true;
+    } else {
+        logModuleCall(
+            'immun',
+            __FUNCTION__,
+            'Suspend attempt',
+            $params,
+            get_declared_classes()
+        );
+    }
 
-        if ($params['params']['moduletype'] != 'onconnector') {
-            return true;
-        } else {
-            logModuleCall(
-                'immun',
-                __FUNCTION__,
-                'Suspend attempt',
-                $params,
-                get_declared_classes()
-            );
-        }
+    if (class_exists('WHMCS\Form')) {
+        logModuleCall(
+            'immun',
+            __FUNCTION__,
+            'Manual suspend',
+            $params,
+            get_declared_classes()
+        );
+    }
 
-        if (class_exists('WHMCS\Form')) {
-            logModuleCall(
-                'immun',
-                __FUNCTION__,
-                'Manual suspend',
-                $params,
-                get_declared_classes()
-            );
-        }
+    if (strstr($params['params']['suspendreason'], 'force')) {
+        return true;
+    } else {
+        $customname = Capsule::table('tblconfiguration')->where('setting', 'customfield')->get();
+        $customfildcheck = Capsule::table('tblcustomfields')
+            ->select('id')->where('fieldname', $customname[0]->value)->get();
+        $castomfild = Capsule::table('tblcustomfieldsvalues')
+            ->where('relid', $params['params']['userid'])
+            ->where('fieldid', $customfildcheck[0]->id)
+            ->get();
 
-        if (strstr($params['params']['suspendreason'], 'force')) {
-            return true;
-        } else {
-            $castomfild = Capsule::table('tblcustomfieldsvalues')
-                ->where('relid', $params['params']['userid'])
-                ->where('fieldid', '3697')
-                ->get();
+        if (((!isset($castomfild[0]->value)) || ($castomfild[0]->value != 'Да') || ($castomfild[0]->value != 'Yes')) && (date(N) < 5)) {
 
+            $command = 'GetClientsProducts';
+            $postData = array(
+                'serviceid' => $params['params']['serviceid'],
+            );                                                                      // Getting service;
+            $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
+            $adminUsername = $adminlog[0]->value;
 
+            $results = localAPI($command, $postData, $adminUsername);
+            $age = time() - strtotime($results['products']['product'][0]['regdate']);   // Service 'age';
 
-            $customname = Capsule::table('tblconfiguration')->where('setting', 'customfield')->get();
-            $customfildcheck = Capsule::table('tblcustomfields')
-                ->select('id')->where('fieldname', $customname[0]->value)->get();
-            $castomfild = Capsule::table('tblcustomfieldsvalues')
-                ->where('relid', $params['params']['userid'])
-                ->where('fieldid', $customfildcheck[0]->id)
-                ->get();
+            if ($age < 432000) {                                                       // If service isn't older than 30 days;
+                logModuleCall(
+                    'immun',
+                    __FUNCTION__,
+                    'Service age is lower than 30 days',
+                    $params,
+                    $params
+                );
+                $result['abortcmd'] = true;                                         // Setting param for suspend cancellation;
+                return $result;                                                     // Return vars to handler;
+            }
 
-            if (((!isset($castomfild[0]->value)) || ($castomfild[0]->value != 'Да')) && ((!isset($castomfild[0]->value)) || ($castomfild[0]->value != 'Yes')) && (date(N) < 5)) {
+            $invoiceitems = Capsule::table('tblinvoiceitems')
+                ->where('relid', $params['params']['serviceid'])
+                ->get();                                        // Getting invoices for this service from DB;
 
-                // If immun field not created or not filled with 'Yes', and today is not 5, 6 or 7-th weekday.
+            if (!$invoiceitems) {                                 // If no invoices;
+                logModuleCall(
+                    'immun',
+                    __FUNCTION__,
+                    'Service suspended',
+                    $params,
+                    $params
+                );
+                $result['abortcmd'] = true;                     // Setting param for suspend cancellation;
+                return $result;                                 // Return vars to handler;
+            }
 
-                $command = 'GetClientsProducts';
-                $postData = array(
-                    'serviceid' => $params['params']['serviceid'],
-                );                                                                      // Getting service;
-                $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
-                $adminUsername = $adminlog[0]->value;                                              // Init using hell api;
+            $lastInvoice = array_pop($invoiceitems);              // Getting last invoice(dangerous, check it twice);
 
-                $results = localAPI($command, $postData, $adminUsername);
-                $age = time() - strtotime($results['products']['product'][0]['regdate']);   // Service 'age';
+            if (time() < strtotime($lastInvoice->duedate)) {        // If pay-date earlier than today.
+                logModuleCall(
+                    'immun',
+                    __FUNCTION__,
+                    'Invoice transfered or delayed',
+                    $params,
+                    $params
+                );
 
-                if ($age < 2592000) {                                                       // If service isn't older than 30 days;
-                    logModuleCall(
-                        'immun',
-                        __FUNCTION__,
-                        'Service age is lower than 30 days',
-                        $params,
-                        $params
-                    );
-                    $result['abortcmd'] = true;                                         // Setting param for suspend cancellation;
-                    return $result;                                                     // Return vars to handler;
-                }
+                $result['abortcmd'] = true;                     // Setting param for suspend cancellation;
+                return $result;                                 // Return vars to handler;
+            }
 
-                $invoiceitems = Capsule::table('tblinvoiceitems')
-                    ->where('relid', $params['params']['serviceid'])
-                    ->get();                                        // Getting invoices for this service from DB;
+            $delay = Capsule::table('support_delay_invoice')
+                ->where('invoice_id', $lastInvoice->invoiceid)
+                ->get();                                        // Getting from DB next pay-date;
 
-                if (!$invoiceitems) {                                 // If no invoices;
-                    logModuleCall(
-                        'immun',
-                        __FUNCTION__,
-                        'Service suspended',
-                        $params,
-                        $params
-                    );
-                    $result['abortcmd'] = true;                     // Setting param for suspend cancellation;
-                    return $result;                                 // Return vars to handler;
-                }
-
-                $lastInvoice = array_pop($invoiceitems);              // Getting last invoice(dangerous, check it twice);
-
-                if (time() < strtotime($lastInvoice->duedate)) {        // If pay-date earlier than today.
-                    logModuleCall(
-                        'immun',
-                        __FUNCTION__,
-                        'Invoice transfered or delayed',
-                        $params,
-                        $params
-                    );
-
-                    $result['abortcmd'] = true;                     // Setting param for suspend cancellation;
-                    return $result;                                 // Return vars to handler;
-                }
-
-                $delay = Capsule::table('support_delay_invoice')
-                    ->where('invoice_id', $lastInvoice->invoiceid)
-                    ->get();                                        // Getting from DB next pay-date;
-
-                if (time() < strtotime($delay[0]->expire_date))        // If today is earlier than delayed pay-date;
-                {
-                    $result['abortcmd'] = true;                     // Setting param for suspend cancellation;
-                    return $result;                                 // Return vars to handler;
-                } else {
-                    logModuleCall(
-                        'immun',
-                        __FUNCTION__,
-                        'Service suspended',
-                        $params,
-                        $params
-                    );
-                    return true;                                         // Suspending
-                }
+            if (time() < strtotime($delay[0]->expire_date)) {
+                $result['abortcmd'] = true;                     // Setting param for suspend cancellation;
+                return $result;                                 // Return vars to handler;
             } else {
                 logModuleCall(
                     'immun',
                     __FUNCTION__,
-                    'Immun-service suspend attempt',
+                    'Service suspended',
                     $params,
-                    $params['params']['suspendreason']
+                    $params
                 );
-
-                $result['error'] = "This service has suspend immun";
-                $result['abortcmd'] = true;
-                return $result;
+                return true;                                         // Suspending
             }
+        } else {
+            logModuleCall(
+                'immun',
+                __FUNCTION__,
+                'Immun-service suspend attempt',
+                $params,
+                $params['params']['suspendreason']
+            );
+
+            $result['error'] = "This service has suspend immun";
+            $result['abortcmd'] = true;
+            return $result;
         }
     }
 });
+
 add_hook('InvoicePaid', 1, function ($vars) {
 
     $command = 'GetInvoice';
@@ -282,7 +212,6 @@ add_hook('InvoicePaid', 1, function ($vars) {
         $postData = array(
             'accountid' => $results['products']['product'][0]['id'],
         );
-
         $adminlog = Capsule::table('tblconfiguration')->where('setting', 'whmcs_admin')->get();
         $adminUsername = $adminlog[0]->value;
 
@@ -299,12 +228,11 @@ add_hook('InvoicePaid', 1, function ($vars) {
     return;
 
 });
+
 add_hook('EmailPreSend', 1, 'hook_onconnector_EmailPreSend');
 add_hook('EmailTplMergeFields', 1, 'hook_onconnector_EmailTplMergeFields');
-add_hook('InvoiceUnpaid', 1, 'hook_onconnector_Invoice');
-add_hook('InvoiceCancelled', 1, 'hook_onconnector_InvoiceCancelled');
-add_hook('ClientEdit', 1, 'hook_onconnector_clientedit');
-add_hook('AfterInvoicingGenerateInvoiceItems', 1, 'hook_onconnector_AfterInvoicingGenerateInvoiceItems');
+
+
 add_hook('ClientAreaPageProductDetails', 1, function ($vars) {
     $userDate = Capsule::table('mod_on_user')
         ->select('loginon', 'passwordon')
@@ -326,8 +254,7 @@ add_hook('ClientAreaPageProductDetails', 1, function ($vars) {
 });
 
 
-
-    add_hook('ClientAreaPageHome', 1, function ($vars) {
+add_hook('ClientAreaPageHome', 1, function ($vars) {
         if ($vars['clientsdetails']['userid']){
         $result = '';
         $counter = 0;

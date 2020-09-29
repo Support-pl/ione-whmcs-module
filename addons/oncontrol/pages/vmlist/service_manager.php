@@ -1,11 +1,9 @@
 <?php
 
 use WHMCS\Database\Capsule as Capsule;
-ini_set('display_errors', 0);
+
 if (isset($_POST['action'])) {
-//    echo '<pre>';
-//    print_r($_POST);
-//    echo '</pre>';
+
 	extract($_POST);
 	require_once($_SERVER['DOCUMENT_ROOT'] . '/modules/servers/onconnector/lib/ONConnect.php');
 
@@ -102,7 +100,7 @@ if(isset($technicalMessage)) : ?>
 
 
 if (isset($message)): ?>
-	<div class="col-sm-12">                            <!-- STATUS PANEL -->
+	<div class="col-sm-12">
 		<div class="panel panel-success">
 			<div class="panel-heading">
 				<h2><?=$message; ?></h2>

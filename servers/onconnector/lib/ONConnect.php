@@ -1,105 +1,128 @@
 <?php
 use WHMCS\Database\Capsule;
 
-ini_set('display_errors', 0);
 
 class ONConnect
 {
-    private $context;
-    private $socket;
-    private $dsn;
-    private $debug;
 
-    public function __construct($ip=false,$port=8008,$debugMod=false)
+    public function CurlLogin()
     {
-        if(!class_exists('ZMQContext')){
-            logModuleCall(__CLASS__,__FUNCTION__,'error', $this->dsn, 'Failed to load class ZMQContext');
-        }
-        if(!$ip) {
-            $ip = Capsule::table('tblconfiguration')->where('setting', 'ione_config_host')->get();
-            $ip=$ip[0]->value;
+        $username = Capsule::table('tblconfiguration')->where('setting', 'ione_config_login')->get();
+        $password = Capsule::table('tblconfiguration')->where('setting', 'ione_config_passwd')->get();
+        $addr = Capsule::table('tblconfiguration')->where('setting', 'ione_address')->get();
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $addr[0]->value.'login');
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(array()));
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERPWD, $username[0]->value . ":" . $password[0]->value);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $cookie_start = stristr($response, 'sunstone');
+        $cookie = stristr($cookie_start, ' path', true);
+
+
+        if (Capsule::table('tblconfiguration')
+            ->where('setting', 'cookie_on')
+            ->get()) {
+            Capsule::table('tblconfiguration')
+                ->where('setting', 'cookie_on')
+                ->update([
+                    'setting' => 'cookie_on',
+                    'value' => $cookie
+                ]);
+        } else {
+            $result = Capsule::table('tblconfiguration')
+                ->insert([
+                    'setting' => 'cookie_on',
+                    'value' => $cookie
+                ]);
         };
-        if(!$port) {
-            $port = Capsule::table('tblconfiguration')->where('setting', 'ione_config_port')->get();
-            $port=$port[0]->value;
-        }
-        $this->debug=$debugMod;
-        $this->dsn="tcp://".$ip.":".$port;
+
+        return;
     }
 
-    private function farmJson($method,$params)
+    public function CurlConnect($method, $params)
     {
-        $message= array (
-            "jsonrpc"=>"2.0",
-            "method"=>$method,
-            "params"=>$params,
-            "id"=>rand(0,999),
-        );
-        return json_encode($message);
-    }
+        $i = 0;
+        do{
+            $get_cookie = Capsule::table('tblconfiguration')->select('value')->where('setting', 'cookie_on')->get();
+            $addr = Capsule::table('tblconfiguration')->where('setting', 'ione_address')->get();
 
-    private function closeConnection(){
-        $endpoints = $this->socket->getEndpoints();
-        if (!in_array($this->dsn, $endpoints['connect'])) {
-            $this->socket->disconnect($this->dsn);
-        }
-    }
+            $cookie_on = $get_cookie[0]->value;
+            $i++;
+            $data = array('params' => $params);
+            $data_json = json_encode($data);
 
-    private function logParams($params,$message=null)
-    {
-        logModuleCall(
-            __CLASS__,
-            __FUNCTION__,
-            $this->dsn, $params, $message
-        );
-        return '{"id":970,"jsonrpc":"2.0","result":{"userid":666,"vmid":666,"ip":"255.255.255.255"}}';
-    }
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $addr[0]->value.'/ione/' . $method);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_HEADER, 1);
+            curl_setopt($ch, CURLOPT_VERBOSE, true);
+            curl_setopt($ch, CURLOPT_COOKIE, $cookie_on);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+						$response = curl_exec($ch);
+						if ($response === false) {
+							logModuleCall(
+									__CLASS__,
+									__FUNCTION__. " error:",
+									curl_getinfo($ch),
+									'err #' . curl_errno($ch) . ": " . curl_error($ch),
+							);
+						}
+            $error = stripos($response, '401 Unauthorized');
+            if ($error === false) {} else {
 
-    private function zmqCommunication($method,$params,$persistenId='onConnector')
-    {
-        $json = $this->farmJson($method,$params);
-
-        try {
-            $this->context = new ZMQContext();
-            $this->socket = $this->context->getSocket(ZMQ::SOCKET_REQ, 'ZMQSockIone');
-            $this->socket->setSockOpt(ZMQ::SOCKOPT_RCVTIMEO,-1);
-            $this->socket->setSockOpt(ZMQ::SOCKOPT_SNDTIMEO,10000);
-            $endpoints = $this->socket->getEndpoints();
-            if (!in_array($this->dsn, $endpoints['connect'])) {
-                $this->socket->connect($this->dsn);
+                $i++;
+                if ($i < 5) {
+                    curl_close($ch);
+                    $this->CurlLogin();
+                } else {
+                    curl_close($ch);
+                    $err = new stdClass();
+                    $err->response->error = 'Error connection to IONE';
+                    logModuleCall(
+                        __CLASS__,
+                        __FUNCTION__,
+                        'error connect',
+                        $err
+                    );
+                    return $err;
+                }
             }
-            if($this->debug){
-                $message=$this->logParams($json);
-            }else {
-                $this->socket->send($json);
-                $message = $this->socket->recv();
-                $this->logParams($json,$message);
-            }
-            $this->closeConnection();
-            return $message;
-        } catch (Exception $exception){
-            $this->closeConnection();
-                logModuleCall(
-                    __CLASS__,
-                    __FUNCTION__,
-                    $exception, $this->dsn, 'Information could not be retrieved because the server was not reachable'
-                );
-                return ['error'=>true,
-                        'errorMessage'=>'Information could not be retrieved because the server was not reachable'];
-        }
+            curl_close($ch);
+
+        }while($error != '');
+
+        $response_start = stristr($response, '{');
+        $array_answer = json_decode ($response_start);
+
+        return $array_answer;
+    }
+
+    public function IaaS($method,$params){
+        $json=$this->CurlConnect($method,$params);
+        return $json;
     }
 
     public function Suspend($vmid,$force=false)
     {
         $param=array(
-                array (
+            array (
                 'vmid'=>$vmid,
                 'force'=>$force,
                 'log'=>true
             )
         );
-        $json=$this->zmqCommunication("Suspend",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("Suspend",$param);
+        return $json;
     }
 
     public function Unsuspend($vmid)
@@ -109,125 +132,65 @@ class ONConnect
                 'vmid' =>$vmid
             )
         );
-        $json=$this->zmqCommunication("Unsuspend",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("Unsuspend",$param);
+        return $json;
     }
 
     public function Shutdown($vmid)
     {
         $param=array($vmid);
-        $json=$this->zmqCommunication("Shutdown",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("Shutdown",$param);
+        return $json;
     }
 
     public function Reboot($vmid,$bool=true)
     {
         $param=array($vmid,$bool);
-        $json=$this->zmqCommunication("Reboot",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("Reboot",$param);
+        return $json;
     }
 
     public function Terminate($userid, $vmid)
     {
         $param=array($userid,$vmid);
-        $json=$this->zmqCommunication("Terminate",$param);
-        return json_decode($json,true);
-    }
-    public function TerminateIaas($uid)
-    {
-        $param=array($uid);
-        $json=$this->zmqCommunication("UserDelete",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("Terminate",$param);
+        return $json;
     }
 
     public function getVmByName($name)                                  // Getting VM data by name, using for button 'check'
     {
         $param=array($name);
-        $json=$this->zmqCommunication("get_vm_by_uname",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("get_vm_by_uname",$param);
+        return $json;
     }
 
     public function GetIP($vmid)                                        // Getting VM IP using VMID
     {
         $param=array($vmid);
-        $json=$this->zmqCommunication("GetIP",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("GetIP",$param);
+        return $json;
     }
 
-    public function Test($param=array("PING"))                          // Checking IONe availability sending 'ping', answer should be 'pong'
+    public function Test()                                             // Checking IONe availability sending 'ping', answer should be 'pong'
     {
-        $json=$this->zmqCommunication("Test",$param);
-        return json_decode($json,true);
+        $param=array("PING");
+        $json=$this->CurlConnect("Test",$param);
+        return $json;
     }
 
     public function compare_info($ips=[])                               // Getting data about all VMs from IONe
     {
         $params=array($ips);
-        $json=$this->zmqCommunication("compare_info",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("compare_info",$params);
+        $json_new = json_decode(json_encode($json),true);
+        return $json_new;
     }
 
     public function createVMwithSpecs($arrayParam)                      // Creating VM from template with params
     {
         $param=array($arrayParam);
-        $json=$this->zmqCommunication("CreateVMwithSpecs",$param);
-        return json_decode($json,true);
-    }
-
-    public function UserCreateIaaS($arrayParam)                      // Creating iaas user
-    {
-
-        $param=array( $arrayParam['login'],$arrayParam['pass'],$arrayParam['groupid'],$arrayParam['locale']);
-        $json=$this->zmqCommunication("UserCreate",$param);
-        return json_decode($json,true);
-    }
-
-
-
-    public function RetrieveShowback($uid,$time,$balance)                      // get date about iaas users
-    {
-        $checkiaas = Capsule::table('tbladdonmodules')->select('*')->where('module','=','opennebulavdc')->get();
-        if($checkiaas) {
-            $param['uid'] = $uid;
-            $param['time'] = $time;
-            $param['balance'] = $balance;
-
-            $params = array(
-                array(
-                'uid' => $uid,
-                'time' => $time,
-                'balance' => $balance
-                ),
-            );
-
-            logModuleCall(
-                'onconnector',
-                __FUNCTION__,
-                'test',
-                $params
-            );
-            $json = $this->zmqCommunication("IaaS_Gate", $params);
-        }
-
-        return json_decode($json,true);
-    }
-
-    public function SuspendUserIaas($uid){
-        $checkiaas = Capsule::table('tbladdonmodules')->select('*')->where('module','=','opennebulavdc')->get();
-        if($checkiaas) {
-            $params = array($uid);
-            $json = $this->zmqCommunication("SuspendUser", $params);
-            return json_decode($json,true);
-        }
-    }
-
-    public function UnSuspendUserIaas($uid){
-        $checkiaas = Capsule::table('tbladdonmodules')->select('*')->where('module','=','opennebulavdc')->get();
-        if($checkiaas) {
-            $params = array($uid);
-            $json = $this->zmqCommunication("UnsuspendUser", $params);
-            return json_decode($json,true);
-        }
+        $json=$this->CurlConnect("CreateVMwithSpecs",$param);
+        return $json;
     }
 
     public function NewAccount($login, $pass, $templateid, $groupid, $rootpass, $trial, $services, $ansiblebool, $serviceid)
@@ -243,16 +206,16 @@ class ONConnect
             'ansible'=>$ansiblebool,
             'services'=>$services,
             'serviceid'=>$serviceid
-            )
+        )
         );
-        $json=$this->zmqCommunication("NewAccount",$param);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("NewAccount",$param);
+        return $json;
     }
 
     public function Reinstall($params)
     {
-        $json=$this->zmqCommunication("Reinstall",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("Reinstall",$params);
+        return $json;
     }
 
     public function setBackup($func_name, $params = array())
@@ -261,8 +224,8 @@ class ONConnect
             'method'=>$func_name,
             'params'=>$params
         ));
-        $json=$this->zmqCommunication("FreeNASController",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("FreeNASController",$params);
+        return $json;
     }
 
     public function AnsibleController($host,$serviceName)
@@ -271,77 +234,78 @@ class ONConnect
             'host'=>$host,
             'services' => $serviceName
         ));
-        $json=$this->zmqCommunication("AnsibleController",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("AnsibleController",$params);
+        return $json;
     }
 
     public function import($params)
     {
         $params=array($params);
-        $json=$this->zmqCommunication("IMPORT",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("IMPORT",$params);
+        return $json;
     }
 
     public function getSnapshotList($vmid)
     {
-        $json=$this->zmqCommunication("GetSnapshotList",array($vmid));
-        return json_decode($json,true);
+        $json=$this->CurlConnect("GetSnapshotList",array($vmid));
+        return $json;
     }
 
     public function MKSnapshot($vmid, $name)
     {
         $params=array($vmid,$name);
-        $json=$this->zmqCommunication("MKSnapshot",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("MKSnapshot",$params);
+        return $json;
     }
 
     public function RMSnapshot($vmid, $snapid)
     {
         $params=array($vmid,$snapid);
-        $json=$this->zmqCommunication("RMSnapshot",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("RMSnapshot",$params);
+        return $json;
     }
 
     public function RevSnapshot($vmid, $snapid)
     {
         $params=array($vmid,$snapid);
-        $json=$this->zmqCommunication("RevSnapshot",$params);
-        return json_decode($json,true);
+        $json=$this->CurlConnect("RevSnapshot",$params);
+        return $json;
     }
 
     public function lcmStateStr($vmid)
     {
-        $json=$this->zmqCommunication("LCM_STATE_STR",array($vmid));
-        return json_decode($json,true);
+        $json=$this->CurlConnect("LCM_STATE_STR",array($vmid));
+        return $json;
     }
 
     public function stateStr($vmid)
     {
-        $json=$this->zmqCommunication("STATE_STR",array($vmid));
-        return json_decode($json,true);
+        $json=$this->CurlConnect("STATE_STR",array($vmid));
+        return $json;
     }
 
     public function getVmData($vmid)
     {
-        $json=$this->zmqCommunication("get_vm_data",array($vmid));
-        return json_decode($json,true);
+        $json=$this->CurlConnect("get_vm_data",array($vmid));
+        return $json;
     }
 
     public function datastoresMonitoring($type='img')
     {
-        $json=$this->zmqCommunication("DatastoresMonitoring",array($type));
-        return json_decode($json,true);
+        $json=$this->CurlConnect("DatastoresMonitoring",array($type));
+        return $json;
     }
 
     public function hostsMonitoring()
     {
-        $json=$this->zmqCommunication("HostsMonitoring",array());
-        return json_decode($json,true);
+        $json=$this->CurlConnect("HostsMonitoring",array());
+        return $json;
     }
 
     public function reinstallNew($param)
     {
-        $json=$this->zmqCommunication("ReinstallNew",array($param));
-        return json_decode($json,true);
+        $json=$this->CurlConnect("ReinstallNew",array($param));
+        return $json;
     }
+
 }

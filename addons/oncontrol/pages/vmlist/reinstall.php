@@ -7,7 +7,6 @@ if (!defined("WHMCS")) {
 	die("This file cannot be accessed directly");
 }
 
-ini_set('display_errors', 0);
 $idRefreshSystem=$_GET['serviceId'];
 extract($_POST);?>
     <div class="container-fluid">
@@ -27,10 +26,6 @@ extract($_POST);?>
         $reinstal_settings[]=$oneObject;
         print ($packageid);
     }
-
-    $ansibles = Capsule::table('mod_onconfiguratorAddon')
-        ->select('id','name','descriptions','os')
-        ->get();
 
     $operating_systems = Capsule::table('tbladdons')
     ->select('tbladdons.id as addonid','tbladdons.name as os')
@@ -52,13 +47,10 @@ extract($_POST);?>
 
 	<script type="text/javascript">
         var tariffs = <?=json_encode($reinstal_settings)?>;
-        var ansible = <?=json_encode($ansibles)?>;
+
         var osConfig = <?=json_encode($osConfig)?>;
 
-        ansible = ansible.map(function(item){
-            item.os=item.os.match(/\d+/g);
-            return item;
-        });
+
 
         $(document).ready(
             function () {
@@ -67,17 +59,8 @@ extract($_POST);?>
                     var idChangeOs = this.value;
                     $('input:checkbox:checked').prop( "checked", false );
 
-                    ansibleConfigFilter = ansible.filter(function (currentValue) {
-                        if(currentValue.os.indexOf(idChangeOs)!='-1'){
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    }).map(function(item){
-                        return $('#checkbox_'+item.id)[0];
-                    });
                     checkBoxs.removeAttr("disabled");
-                    checkBoxs.not(ansibleConfigFilter).attr("disabled","disabled");
+
                 });
 
                 $('#idNewProduct').on('change', function() {
@@ -124,13 +107,6 @@ extract($_POST);?>
 				<form method="GET" action="/admin/addonmodules.php">
                     <div class=" test col-sm-12"></div>
 
-                    <div>
-                        <?php foreach ($ansibles as $ansible):?>
-                            <label class="checkbox-inline">
-                                <input id="checkbox_<?=$ansible->id?>" name="ansibles[]" type="checkbox" value="<?=$ansible->id?>"><?=$ansible->name?>
-                            </label>
-                        <? endforeach;?>
-                    </div>
 
 					<div class="col-sm-12">
 						<label for="groupId"><?=$LANG['reinstallgp']?>:</label>
@@ -159,8 +135,6 @@ extract($_POST);?>
 
 					<div class="col-sm-6" class="text-center" style="margin-top: 20px;">
                         <input type="hidden" name="module" value="oncontrol">
-                        <input type="hidden" name="tabs" value="ansible">
-                        <input type="hidden" name="mod" value="ansibledb">
                         <input type="hidden" name="action" value="reinstall">
 						<input type="hidden" name="serviceId" value="<?php echo $idRefreshSystem ?>">
                         <input type="hidden" name="forced" value="true">
