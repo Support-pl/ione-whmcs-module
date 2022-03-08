@@ -36,12 +36,12 @@ use WHMCS\Database\Capsule;
             <option value="pachage2">vCenter</option>
             <option value="pachage3">KVM</option>
         </select>
+        <br>
 
-        <br><br>
         <input type="submit" style="width: 200px;height: 30px;background: #fff;border: 1px solid;" value="Create">
     </form>
-<?php
 
+<?php
 
 
 if($_REQUEST['disk'][0] != NULL) {
@@ -52,11 +52,13 @@ if($_REQUEST['disk'][0] != NULL) {
     $time = date('Y-m-d H:i:s');
     $last_order_temp = Capsule::table('tblproductgroups')->orderBy('order', 'desc')->limit(1)->select('order')->get();
     $last_order = $last_order_temp[0]->order;
+    $last_prod_temp = Capsule::table('tblproducts')->orderBy('id', 'desc')->limit(1)->select('id')->get();
+    $last_prod = $last_prod_temp[0]->id;
     foreach ($_REQUEST['disk'] as $item) {
         $last_order++;
         $group_array[] = array(
-            'name' => 'Self-Service VDS ' . $item,
-            'slug' => 'Self-Service VDS ' . $item,
+            'name' => 'VDS ' . $item,
+            'slug' => 'VDS ' . $item,
             'headline' => '',
             'tagline' => '',
             'orderfrmtpl' => $order_form,
@@ -71,122 +73,984 @@ if($_REQUEST['disk'][0] != NULL) {
 
     Capsule::table('tblproductgroups')->insert($group_array);
 
-    $new_group = Capsule::table('tblproductgroups')->where('order', '>', $last_order_temp[0]->order)->get();
+
+    $i_count = 1;
+    if(!$last_order_temp[0]->order){
+        foreach ($_REQUEST['disk'] as $item) {
+            $new_group[]->id = $i_count;
+            $i_count++;
+        }
+
+    }else {
+        $new_group = Capsule::table('tblproductgroups')->where('order', '>', $last_order_temp[0]->order)->get();
+    }
 
     $i = 0;
+    if($last_prod == NULL){
+        $last_prod = 0;
+    }
 
     foreach ($new_group as $groups) {
+        //standart prod
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS M ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS M',
+            'description' => 'CPU: 1
+RAM: 2
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 1,
             'configoption2' => 2,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '1'
         );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '5.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS L ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS L',
+            'description' => 'CPU: 2
+RAM: 4
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 2,
             'configoption2' => 4,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '2'
         );
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '10.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS XL ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS XL',
+            'description' => 'CPU: 3
+RAM: 6
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 3,
             'configoption2' => 6,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '3'
         );
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '15.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS XXL ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS XXL',
+            'description' => 'CPU: 4
+RAM: 8
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 4,
             'configoption2' => 8,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '4'
         );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '20.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS 3XL ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS 3XL',
+            'description' => 'CPU: 6
+RAM: 12
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 6,
             'configoption2' => 12,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '5'
         );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '25.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS 4XL ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS 4XL',
+            'description' => 'CPU: 8
+RAM: 16
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 8,
             'configoption2' => 16,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '6'
         );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '30.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
         $product_array[] = array(
             'type' => 'other',
             'gid' => $groups->id,
             'name' => 'VDS 5XL ' . $_REQUEST['disk'][$i],
-            'slug' => '',
-            'description' => 'VDS 5XL',
+            'description' => 'CPU: 10
+RAM: 24
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
             'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
-            'paytype' => 'free',
+            'paytype' => 'recurring',
             'servertype' => 'onconnector',
             'configoption1' => 10,
             'configoption2' => 24,
             'configoption3' => $_REQUEST['disk'][$i],
             'configoption4' => $_REQUEST['disk_size'],
             'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '7'
         );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '35.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        //x2cpu
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS M X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 2
+RAM: 2
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 2,
+            'configoption2' => 2,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '8'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '10.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS L X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 4
+RAM: 4
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 4,
+            'configoption2' => 4,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '9'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '15.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS XL X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 6
+RAM: 6
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 6,
+            'configoption2' => 6,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '10'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '20.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS XXL X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 8
+RAM: 8
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 8,
+            'configoption2' => 8,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '11'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '25.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS 3XL X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 12
+RAM: 12
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 12,
+            'configoption2' => 12,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '12'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '30.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS 4XL X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 16
+RAM: 16
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 16,
+            'configoption2' => 16,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '13'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '35.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS 5XL X2CPU ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 20
+RAM: 24
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 20,
+            'configoption2' => 24,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '14'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '40.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+
+        //x2ram
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS M X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 1
+RAM: 4
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 1,
+            'configoption2' => 4,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '15'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '15.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS L X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 2
+RAM: 8
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 2,
+            'configoption2' => 8,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '16'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '20.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS XL X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 3
+RAM: 12
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 3,
+            'configoption2' => 12,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '17'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '25.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS XXL X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 4
+RAM: 16
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 4,
+            'configoption2' => 16,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '18'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '30.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS 3XL X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 6
+RAM: 24
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 6,
+            'configoption2' => 24,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '19'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '35.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS 4XL X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 8
+RAM: 32
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 8,
+            'configoption2' => 32,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '20'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '40.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+        $product_array[] = array(
+            'type' => 'other',
+            'gid' => $groups->id,
+            'name' => 'VDS 5XL X2RAM ' . $_REQUEST['disk'][$i],
+            'description' => 'CPU: 10
+RAM: 48
+'.$_REQUEST['disk'][$i].': '.$_REQUEST['disk_size'].'
+            ',
+            'hidden' => $_REQUEST['product_hidden'] == 'on' ? '1' : '0',
+            'paytype' => 'recurring',
+            'servertype' => 'onconnector',
+            'configoption1' => 10,
+            'configoption2' => 48,
+            'configoption3' => $_REQUEST['disk'][$i],
+            'configoption4' => $_REQUEST['disk_size'],
+            'configoption5' => $_REQUEST['node'],
+            "autosetup" => 'payment',
+            'order' => '21'
+        );
+
+        $last_prod++;
+        $product_price[] = array(
+            'type' => 'product',
+            'currency' => '1',
+            'relid' => $last_prod,
+            'msetupfee' => '0.00',
+            'qsetupfee' => '0.00',
+            'ssetupfee' => '0.00',
+            'asetupfee' => '0.00',
+            'bsetupfee' => '0.00',
+            'tsetupfee' => '0.00',
+            'monthly' => '45.00',
+            'quarterly' => '-1.00',
+            'semiannually' => '-1.00',
+            'annually' => '-1.00',
+            'biennially' => '-1.00',
+            'triennially' => '-1.00',
+        );
+
+
+
         Capsule::table('tblproducts')->insert($product_array);
+        Capsule::table('tblpricing')->insert($product_price);
         unset($product_array);
+        unset($product_price);
 
         $i++;
     }
+    $i_disk = 0;
+    $ii = 0;
+    $last_addons_temp = Capsule::table('tbladdons')->orderBy('id', 'desc')->limit(1)->select('id')->get();
+    $last_addons = $last_addons_temp[0]->id;
+    foreach ($new_group as $groups) {
 
+        $start = 10;
+        $finish = 280;
+        $step = 10;
+        $price = 2;
+
+        for($i = $start; $i <= $finish; $i = $i + $step){
+            $ii++;
+            $addons_array[] = array(
+                'name' => 'Disk '.$_REQUEST['disk'][$i_disk].' '.$i.' GB',
+                'description' => '',
+                'billingcycle' => 'monthly',
+                'allowqty' => '0',
+                'tax' => '0',
+                'showorder' => '1',
+                'hidden' => '0',
+                'retired' => '0',
+                'downloads' => '',
+                'autoactivate' => 'payment',
+                'suspendproduct' => 1,
+                'welcomeemail' => 0,
+                'type' => 'other',
+                'module' => 'onconnector',
+                'weight' => $ii,
+            );
+
+            $last_addons++;
+
+            $addons_config[] = array(
+                'entity_type' => 'addon',
+                'entity_id' => $last_addons,
+                'setting_name' => 'configoption4',
+                'friendly_name' => 'DISK VALUE:',
+                'value' => $i
+            );
+
+            $product_price[] = array(
+                'type' => 'addon',
+                'currency' => '1',
+                'relid' => $last_addons,
+                'msetupfee' => '0.00',
+                'qsetupfee' => '0.00',
+                'ssetupfee' => '0.00',
+                'asetupfee' => '0.00',
+                'bsetupfee' => '0.00',
+                'tsetupfee' => '0.00',
+                'monthly' => $price,
+                'quarterly' => '-1.00',
+                'semiannually' => '-1.00',
+                'annually' => '-1.00',
+                'biennially' => '-1.00',
+                'triennially' => '-1.00',
+            );
+
+            $price = $price + 2;
+
+        }
+        $i_disk ++;
+
+        Capsule::table('tbladdons')->insert($addons_array);
+        Capsule::table('tblmodule_configuration')->insert($addons_config);
+        Capsule::table('tblpricing')->insert($product_price);
+        unset($addons_array);
+        unset($addons_config);
+        unset($product_price);
+
+    }
+
+
+    $os_name = array(
+        'CentOS 7','CentOS 8','Debian 9','Debian 10','Ubuntu 16.04','Ubuntu 18.04','Ubuntu 20.04','Windows Server 2012','Windows Server 2016','Windows Server 2019'
+    );
+
+
+    foreach ($os_name as $item){
+        $ii++;
+        $addons_array[] = array(
+            'name' => $item,
+            'description' => '',
+            'billingcycle' => 'free',
+            'allowqty' => '0',
+            'tax' => '0',
+            'showorder' => '1',
+            'hidden' => '0',
+            'retired' => '0',
+            'downloads' => '',
+            'autoactivate' => 'payment',
+            'suspendproduct' => 1,
+            'welcomeemail' => 0,
+            'type' => 'other',
+            'module' => 'onconnector',
+            'weight' => $ii,
+        );
+
+        $last_addons++;
+
+        $addons_config[] = array(
+            'entity_type' => 'addon',
+            'entity_id' => $last_addons,
+            'setting_name' => 'configoption7',
+            'friendly_name' => 'OS:',
+            'value' => 'on'
+        );
+    }
+
+    Capsule::table('tbladdons')->insert($addons_array);
+    Capsule::table('tblmodule_configuration')->insert($addons_config);
+    unset($addons_array);
+    unset($addons_config);
 
 }
 
